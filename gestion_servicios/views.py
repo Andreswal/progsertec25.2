@@ -45,6 +45,63 @@ class ReparacionListView(ListView):
 class ReparacionCreateView(View):
     template_name = 'gestion_servicios/crear_servicio.html'
 
+    def post(self, request, *args, **kwargs):
+        # 1. Instanciar los formularios con los datos del POST
+        cliente_form = ClienteForm(request.POST)
+        equipo_form = EquipoForm(request.POST)
+        reparacion_form = ReparacionForm(request.POST)
+
+        # 2. Verificar la validez de TODOS los formularios
+        if cliente_form.is_valid() and equipo_form.is_valid() and reparacion_form.is_valid():
+            
+            # --- Lógica de Guardado (Solo si todos son válidos) ---
+            
+            cliente = cliente_form.save(commit=False)
+            equipo = equipo_form.save(commit=False)
+            
+            # 1. Búsqueda y Manejo del Cliente existente
+            try:
+                # Si el cliente ya existe (por clave), NO lo creamos.
+                cliente_existente = Cliente.objects.get(clave=cliente.clave)
+                cliente = cliente_existente
+            except Cliente.DoesNotExist:
+                # Si no existe, lo guardamos en la DB
+                cliente.save()
+
+            # 2. Búsqueda y Manejo del Equipo existente
+            try:
+                # Si el equipo ya existe (por SN), NO lo creamos.
+                equipo_existente = Equipo.objects.get(numero_serie=equipo.numero_serie)
+                equipo = equipo_existente
+            except Equipo.DoesNotExist:
+                # Si no existe, lo guardamos en la DB
+                equipo.save()
+
+            # 3. Guardar la Reparación
+            reparacion = reparacion_form.save(commit=False)
+            reparacion.cliente = cliente
+            reparacion.equipo = equipo
+            reparacion.save()
+
+            messages.success(request, f"Orden de Servicio #{reparacion.pk} generada con éxito.")
+            return redirect('lista_servicios')
+
+        # 3. Si algún formulario NO es válido (Invalido)
+        else:
+            # Si la validación falla, renderiza la plantilla con los formularios y sus errores
+            context = self.get_context_data() # Obtiene los formularios limpios (pero no es lo que queremos)
+            
+            # Sobrescribimos el contexto con los formularios que contienen los datos POST y los errores
+            context['cliente_form'] = cliente_form
+            context['equipo_form'] = equipo_form
+            context['reparacion_form'] = reparacion_form
+            
+            # Mensaje general para el usuario
+            messages.error(request, "Error de validación: Por favor, revisa los campos marcados en rojo.")
+            
+            return render(request, self.template_name, context)
+
+
     def get_context_data(self, cliente_form=None, equipo_form=None, reparacion_form=None):
         # Función auxiliar para generar el contexto (formularios)
         return {

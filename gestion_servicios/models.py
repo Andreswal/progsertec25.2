@@ -88,7 +88,7 @@ class Equipo(TimeStampedModel): # Hereda la auditoría
     # Datos propios del equipo (con tus ajustes)
     numero_serie = models.CharField(max_length=100, unique=True, verbose_name="Número de Serie")
     # Nuevo campo para celulares
-    imei = models.CharField(max_length=100, unique=True, null=True, blank=True, verbose_name="IMEI")
+    imei = models.CharField(max_length=15, unique=True, null=True, blank=True, verbose_name="IMEI")
     # Nuevo campo para garantía
     fecha_compra = models.DateField(null=True, blank=True, verbose_name="Fecha de Compra") 
 

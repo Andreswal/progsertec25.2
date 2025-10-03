@@ -24,21 +24,51 @@
             </div>
             <div class="card-body">
                 <div class="row">
+                    <div class="col-md-3 mb-3">
+                        <label for="{{ cliente_form.clave.id_for_label }}" class="form-label">DNI/RUC/Clave</label>
+                        {{ cliente_form.clave }}
+                        {% for error in cliente_form.clave.errors %}
+                            <div class="text-danger small">{{ error }}</div>
+                        {% endfor %}
+                    </div>
                     <div class="col-md-6 mb-3">
                         <label for="{{ cliente_form.nombre.id_for_label }}" class="form-label">Nombre o Razón Social</label>
                         {{ cliente_form.nombre }}
-                        {% if cliente_form.nombre.errors %}<div class="text-danger">{{ cliente_form.nombre.errors }}</div>{% endif %}
+                        {% for error in cliente_form.nombre.errors %}
+                            <div class="text-danger small">{{ error }}</div>
+                        {% endfor %}
                     </div>
+                    
                     <div class="col-md-3 mb-3">
-                        <label for="{{ cliente_form.clave.id_for_label }}" class="form-label">DNI/RUC/Clave</label>
-                        {# Usa el filtro 'attr' para asegurar el ID y el estilo de Bootstrap #}
-                        {{ cliente_form.clave|attr:"id:id_clave"|attr:"class:form-control" }} 
-                        {% if cliente_form.clave.errors %}<div class="text-danger">{{ cliente_form.clave.errors }}</div>{% endif %}
-                    </div>
-                    <div class="col-md-3 mb-3">
-                        <label for="{{ cliente_form.telefono.id_for_label }}" class="form-label">Teléfono</label>
+                        <label for="{{ cliente_form.telefono.id_for_label }}" class="form-label">Teléfono Fijo</label>
                         {{ cliente_form.telefono }}
-                        {% if cliente_form.telefono.errors %}<div class="text-danger">{{ cliente_form.telefono.errors }}</div>{% endif %}
+                        {% for error in cliente_form.telefono.errors %}
+                            <div class="text-danger small">{{ error }}</div>
+                        {% endfor %}
+                    </div>
+                </div>
+                
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label for="{{ cliente_form.direccion.id_for_label }}" class="form-label">Dirección</label>
+                        {{ cliente_form.direccion }}
+                        {% for error in cliente_form.direccion.errors %}
+                            <div class="text-danger small">{{ error }}</div>
+                        {% endfor %}
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <label for="{{ cliente_form.celular.id_for_label }}" class="form-label">Celular (Alt.)</label>
+                        {{ cliente_form.celular }}
+                        {% for error in cliente_form.celular.errors %}
+                            <div class="text-danger small">{{ error }}</div>
+                        {% endfor %}
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <label for="{{ cliente_form.email.id_for_label }}" class="form-label">Email</label>
+                        {{ cliente_form.email }}
+                        {% for error in cliente_form.email.errors %}
+                            <div class="text-danger small">{{ error }}</div>
+                        {% endfor %}
                     </div>
                 </div>
                 </div>
@@ -53,12 +83,32 @@
                     <div class="col-md-4 mb-3">
                         <label for="{{ equipo_form.modelo.id_for_label }}" class="form-label">Modelo</label>
                         {{ equipo_form.modelo }}
-                        {% if equipo_form.modelo.errors %}<div class="text-danger">{{ equipo_form.modelo.errors }}</div>{% endif %}
+                        {% for error in equipo_form.modelo.errors %}
+                            <div class="text-danger small">{{ error }}</div>
+                        {% endfor %}
                     </div>
                     <div class="col-md-4 mb-3">
                         <label for="{{ equipo_form.numero_serie.id_for_label }}" class="form-label">Número de Serie (SN)</label>
                         {{ equipo_form.numero_serie }}
-                        {% if equipo_form.numero_serie.errors %}<div class="text-danger">{{ equipo_form.numero_serie.errors }}</div>{% endif %}
+                        {% for error in equipo_form.numero_serie.errors %}
+                            <div class="text-danger small">{{ error }}</div>
+                        {% endfor %}
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <label for="{{ equipo_form.imei.id_for_label }}" class="form-label">IMEI/Código</label>
+                        {{ equipo_form.imei }}
+                        {% for error in equipo_form.imei.errors %}
+                            <div class="text-danger small">{{ error }}</div>
+                        {% endfor %}
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-4 mb-3">
+                        <label for="{{ equipo_form.fecha_compra.id_for_label }}" class="form-label">Fecha de Compra</label>
+                        {{ equipo_form.fecha_compra }}
+                        {% for error in equipo_form.fecha_compra.errors %}
+                            <div class="text-danger small">{{ error }}</div>
+                        {% endfor %}
                     </div>
                     </div>
             </div>
@@ -72,12 +122,16 @@
                 <div class="mb-3">
                     <label for="{{ reparacion_form.falla_reportada.id_for_label }}" class="form-label">Falla Reportada por el Cliente</label>
                     {{ reparacion_form.falla_reportada }}
-                    {% if reparacion_form.falla_reportada.errors %}<div class="text-danger">{{ reparacion_form.falla_reportada.errors }}</div>{% endif %}
+                    {% for error in reparacion_form.falla_reportada.errors %}
+                        <div class="text-danger small">{{ error }}</div>
+                    {% endfor %}
                 </div>
                 <div class="mb-3">
                     <label for="{{ reparacion_form.tecnico_asignado.id_for_label }}" class="form-label">Técnico Asignado (Opcional)</label>
                     {{ reparacion_form.tecnico_asignado }}
-                    {% if reparacion_form.tecnico_asignado.errors %}<div class="text-danger">{{ reparacion_form.tecnico_asignado.errors }}</div>{% endif %}
+                    {% for error in reparacion_form.tecnico_asignado.errors %}
+                        <div class="text-danger small">{{ error }}</div>
+                    {% endfor %}
                 </div>
             </div>
         </div>

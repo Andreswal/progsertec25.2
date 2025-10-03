@@ -12,10 +12,16 @@ from .models import Cliente, Equipo, Reparacion
 class ClienteForm(forms.ModelForm):
     class Meta:
         model = Cliente
-        fields = ['nombre', 'direccion', 'telefono', 'celular', 'email', 'clave']
+        fields = ['clave', 'nombre', 'direccion', 'telefono', 'celular', 'email']
         # Puedes añadir widgets para mejorar la apariencia (Bootstrap, etc.)
         widgets = {
-            'clave': forms.TextInput(attrs={'placeholder': 'DNI/Identificación', 'required': True}),
+            
+            'nombre': forms.TextInput(attrs={'class': 'form-control'}),
+            'clave': forms.TextInput(attrs={'class': 'form-control', 'id': 'id_clave'}),
+            'direccion': forms.TextInput(attrs={'class': 'form-control'}),
+            'telefono': forms.TextInput(attrs={'class': 'form-control'}),
+            'celular': forms.TextInput(attrs={'class': 'form-control'}), # Nuevo
+            'email': forms.EmailInput(attrs={'class': 'form-control'}), # Nuevo
         }
 
 # Usado en ReparacionCreateView
@@ -26,7 +32,11 @@ class EquipoForm(forms.ModelForm):
         fields = ['modelo', 'numero_serie', 'imei', 'fecha_compra']
         widgets = {
              # El cliente necesita ingresar el número de serie
-            'numero_serie': forms.TextInput(attrs={'required': True}), 
+            'modelo': forms.TextInput(attrs={'class': 'form-control'}),
+            'numero_serie': forms.TextInput(attrs={'class': 'form-control'}),
+            'imei': forms.TextInput(attrs={'class': 'form-control'}), # Nuevo
+            'fecha_compra': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}), # Nuevo (Usamos type=date para selector)
+        
         }
 
 # Usado en ReparacionCreateView
