@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+
+{% block title %}Modificar OS #{{ object.pk }}{% endblock %}
+
+{% block content %}
+    <h1 class="mb-4">Orden de Servicio #{{ object.pk }}</h1>
+    <span class="badge bg-info p-2 mb-4">Estado Actual: {{ object.get_estado_display }}</span>
+
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header bg-secondary text-white">Datos del Cliente</div>
+                <ul class="list-group list-group-flush">
+                    <li class="list-group-item"><strong>Nombre:</strong> {{ object.cliente.nombre }}</li>
+                    <li class="list-group-item"><strong>DNI/RUC:</strong> {{ object.cliente.clave }}</li>
+                    <li class="list-group-item"><strong>Teléfono:</strong> {{ object.cliente.telefono }}</li>
+                </ul>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header bg-secondary text-white">Datos del Equipo</div>
+                <ul class="list-group list-group-flush">
+                    <li class="list-group-item"><strong>Modelo:</strong> {{ object.equipo.modelo }}</li>
+                    <li class="list-group-item"><strong>Nro. Serie:</strong> {{ object.equipo.numero_serie }}</li>
+                    <li class="list-group-item"><strong>Falla Inicial:</strong> {{ object.falla_reportada }}</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <div class="card mb-4">
+        <div class="card-header bg-primary text-white">Actualización de Taller</div>
+        <div class="card-body">
+            <form method="post" novalidate>
+                {% csrf_token %}
+
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label for="{{ form.estado.id_for_label }}" class="form-label">Estado de la Reparación</label>
+                        {{ form.estado }}
+                        {% if form.estado.errors %}<div class="text-danger">{{ form.estado.errors }}</div>{% endif %}
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label for="{{ form.tecnico_asignado.id_for_label }}" class="form-label">Técnico Asignado</label>
+                        {{ form.tecnico_asignado }}
+                        {% if form.tecnico_asignado.errors %}<div class="text-danger">{{ form.tecnico_asignado.errors }}</div>{% endif %}
+                    </div>
+                </div>
+                
+                <div class="mb-3">
+                    <label for="{{ form.informe_tecnico.id_for_label }}" class="form-label">Informe Técnico / Diagnóstico</label>
+                    {{ form.informe_tecnico }}
+                    {% if form.informe_tecnico.errors %}<div class="text-danger">{{ form.informe_tecnico.errors }}</div>{% endif %}
+                </div>
+
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label for="{{ form.mano_de_obra.id_for_label }}" class="form-label">Costo de Mano de Obra ($)</label>
+                        {{ form.mano_de_obra }}
+                        {% if form.mano_de_obra.errors %}<div class="text-danger">{{ form.mano_de_obra.errors }}</div>{% endif %}
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label for="{{ form.saldo_final.id_for_label }}" class="form-label">Saldo Final a Pagar ($)</label>
+                        {{ form.saldo_final }}
+                        {% if form.saldo_final.errors %}<div class="text-danger">{{ form.saldo_final.errors }}</div>{% endif %}
+                    </div>
+                </div>
+
+                <hr>
+                
+                <button type="submit" class="btn btn-primary me-2">Guardar Cambios</button>
+                <a href="{% url 'lista_servicios' %}" class="btn btn-secondary">Volver al Listado</a>
+            </form>
+        </div>
+    </div>
+    
+    {% if object.estado == 'TERMINADA' or object.estado == 'NO_REPARABLE' %}
+    <div class="card p-3 bg-light border-success mb-4">
+        <h5 class="card-title text-success">Acción Final</h5>
+        <p class="card-text">Confirma la entrega del equipo al cliente y el cierre de esta Orden de Servicio.</p>
+        <form method="post" action="{% url 'cerrar_servicio' pk=object.pk %}">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-success btn-lg" onclick="return confirm('ATENCIÓN: ¿Confirma que el equipo ha sido entregado y desea cerrar la OS #{{ object.pk }}?');">
+                Cerrar y Entregar Equipo
+            </button>
+        </form>
+    </div>
+    {% endif %}
+
+{% endblock %}

@@ -1,0 +1,92 @@
+
+
+{% extends "base.html" %}
+{% load static %}
+{% load widget_tweaks %}
+
+{% block title %}Crear Nueva Orden de Servicio{% endblock %}
+
+{% block content %}
+    <h1 class="mb-4">Ingreso de Nueva Orden de Servicio</h1>
+    
+    <form method="post" class="needs-validation" novalidate>
+        {% csrf_token %}
+
+        {% if cliente_form.errors or equipo_form.errors or reparacion_form.errors %}
+            <div class="alert alert-danger">
+                Por favor, corrige los errores en los formularios a continuación.
+            </div>
+        {% endif %}
+
+        <div class="card mb-4">
+            <div class="card-header bg-secondary text-white">
+                Datos del Cliente
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label for="{{ cliente_form.nombre.id_for_label }}" class="form-label">Nombre o Razón Social</label>
+                        {{ cliente_form.nombre }}
+                        {% if cliente_form.nombre.errors %}<div class="text-danger">{{ cliente_form.nombre.errors }}</div>{% endif %}
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <label for="{{ cliente_form.clave.id_for_label }}" class="form-label">DNI/RUC/Clave</label>
+                        {# Usa el filtro 'attr' para asegurar el ID y el estilo de Bootstrap #}
+                        {{ cliente_form.clave|attr:"id:id_clave"|attr:"class:form-control" }} 
+                        {% if cliente_form.clave.errors %}<div class="text-danger">{{ cliente_form.clave.errors }}</div>{% endif %}
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <label for="{{ cliente_form.telefono.id_for_label }}" class="form-label">Teléfono</label>
+                        {{ cliente_form.telefono }}
+                        {% if cliente_form.telefono.errors %}<div class="text-danger">{{ cliente_form.telefono.errors }}</div>{% endif %}
+                    </div>
+                </div>
+                </div>
+        </div>
+
+        <div class="card mb-4">
+            <div class="card-header bg-secondary text-white">
+                Datos del Equipo
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-4 mb-3">
+                        <label for="{{ equipo_form.modelo.id_for_label }}" class="form-label">Modelo</label>
+                        {{ equipo_form.modelo }}
+                        {% if equipo_form.modelo.errors %}<div class="text-danger">{{ equipo_form.modelo.errors }}</div>{% endif %}
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <label for="{{ equipo_form.numero_serie.id_for_label }}" class="form-label">Número de Serie (SN)</label>
+                        {{ equipo_form.numero_serie }}
+                        {% if equipo_form.numero_serie.errors %}<div class="text-danger">{{ equipo_form.numero_serie.errors }}</div>{% endif %}
+                    </div>
+                    </div>
+            </div>
+        </div>
+
+        <div class="card mb-4">
+            <div class="card-header bg-secondary text-white">
+                Falla y Técnico
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <label for="{{ reparacion_form.falla_reportada.id_for_label }}" class="form-label">Falla Reportada por el Cliente</label>
+                    {{ reparacion_form.falla_reportada }}
+                    {% if reparacion_form.falla_reportada.errors %}<div class="text-danger">{{ reparacion_form.falla_reportada.errors }}</div>{% endif %}
+                </div>
+                <div class="mb-3">
+                    <label for="{{ reparacion_form.tecnico_asignado.id_for_label }}" class="form-label">Técnico Asignado (Opcional)</label>
+                    {{ reparacion_form.tecnico_asignado }}
+                    {% if reparacion_form.tecnico_asignado.errors %}<div class="text-danger">{{ reparacion_form.tecnico_asignado.errors }}</div>{% endif %}
+                </div>
+            </div>
+        </div>
+
+        <button type="submit" class="btn btn-primary btn-lg">Generar Orden de Servicio</button>
+        <a href="{% url 'lista_servicios' %}" class="btn btn-secondary btn-lg">Cancelar</a>
+    </form>
+{% endblock %}
+
+{% block scripts %}
+<script src="{% static 'gestion_servicios/js/autocomplete.js' %}"></script>
+{% endblock scripts %}
