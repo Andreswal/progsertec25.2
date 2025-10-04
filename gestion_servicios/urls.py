@@ -22,5 +22,7 @@ urlpatterns = [
     # URL para la API de búsqueda AJAX/JSON (Nueva línea)
     path('api/buscar_cliente/', views.buscar_cliente_por_clave, name='api_buscar_cliente'),
     
-    
+    # 🌟 NUEVA URL para el modal AJAX
+    path('equipo/guardar-tipo/', views.guardar_tipo_equipo, name='guardar_tipo_equipo'),
+
 ]

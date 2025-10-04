@@ -23,6 +23,65 @@ class TimeStampedModel(models.Model):
 # 1. ENTIDADES BASE (Cliente, Técnico, Marca, Repuesto)
 # ----------------------------------------------------------------------
 
+# --- Modelos de Catálogo ---
+class TipoEquipo(models.Model):
+    nombre = models.CharField(max_length=50, unique=True, verbose_name="Tipo de Equipo")
+    
+    class Meta:
+        verbose_name = "Tipo de Equipo"
+        verbose_name_plural = "Tipos de Equipo"
+
+    def __str__(self):
+        return self.nombre
+
+class Marca(models.Model):
+    nombre = models.CharField(max_length=50, unique=True, verbose_name="Marca")
+
+    class Meta:
+        verbose_name = "Marca"
+        verbose_name_plural = "Marcas"
+
+    def __str__(self):
+        return self.nombre   
+    
+class Equipo(TimeStampedModel):
+    # Clave de Filtrado Unificada
+    serie_imei = models.CharField(
+        max_length=100, 
+        unique=True, 
+        verbose_name="Nro. Serie / IMEI",
+        help_text="Clave única para identificar el equipo."
+    )
+    
+    # Claves Foráneas de Catálogo (Asegúrate de que TipoEquipo y Marca están DEFINIDAS ARRIBA)
+    tipo = models.ForeignKey('TipoEquipo', on_delete=models.SET_NULL, null=True, verbose_name="Tipo de Equipo")
+    marca = models.ForeignKey('Marca', on_delete=models.SET_NULL, null=True, verbose_name="Marca")
+    modelo = models.CharField(max_length=100, verbose_name="Modelo", help_text="Ej. iPhone 12, XPS 13")
+    
+    # Campos Opcionales
+    accesorios = models.TextField(blank=True, verbose_name="Accesorios Entregados")
+    estado_general = models.TextField(blank=True, verbose_name="Estado General y Estético")
+    
+    # Campo de Garantía
+    fecha_compra = models.DateField(blank=True, null=True, verbose_name="Fecha de Compra")
+    
+    class Meta:
+        verbose_name = "Equipo"
+        verbose_name_plural = "Equipos"
+
+    def __str__(self):
+        # Muestra el tipo y la marca para una mejor identificación
+        return f"{self.tipo} {self.marca} - {self.modelo} (SN/IMEI: {self.serie_imei})"
+
+    @property
+    def en_garantia(self):
+        if self.fecha_compra:
+            from datetime import date, timedelta
+            return self.fecha_compra + timedelta(days=365) >= date.today()
+        return False
+
+    
+
 class Cliente(TimeStampedModel): # Hereda la auditoría
     # ClientesCod (ID) es automático
     nombre = models.CharField(max_length=150, verbose_name="Nombre Completo")
@@ -44,11 +103,6 @@ class Tecnico(TimeStampedModel): # Hereda la auditoría
     def __str__(self):
         return self.nombre
         
-class Marca(TimeStampedModel): # Hereda la auditoría
-    nombre = models.CharField(max_length=100, unique=True, verbose_name="Nombre de la Marca")
-
-    def __str__(self):
-        return self.nombre
         
 class Repuesto(TimeStampedModel): # Hereda la auditoría
     # RepuestosCc (ID) es automático
@@ -68,33 +122,40 @@ class Repuesto(TimeStampedModel): # Hereda la auditoría
 # ----------------------------------------------------------------------
 
 class Modelo(TimeStampedModel): # Hereda la auditoría
-    # ModelosCod (ID) es automático
-    marca = models.ForeignKey(Marca, on_delete=models.CASCADE, related_name='modelos')
-    nombre = models.CharField(max_length=100, verbose_name="Nombre del Modelo")
-
-    class Meta:
-        # Asegura que un modelo solo exista una vez por marca
-        unique_together = ('marca', 'nombre') 
-
-    def __str__(self):
-        return f"{self.marca.nombre} - {self.nombre}"
-        
-class Equipo(TimeStampedModel): # Hereda la auditoría
-    # EquiposCod (ID) es automático
-    cliente = models.ForeignKey(Cliente, on_delete=models.CASCADE, related_name='equipos') 
-    # VINCULACIÓN: ¡Importante! Usar la clase Modelo ya definida arriba
-    modelo = models.ForeignKey(Modelo, on_delete=models.SET_NULL, null=True, blank=True, related_name='equipos_modelo') 
+   # Clave de Filtrado Unificada
+    serie_imei = models.CharField(
+        max_length=100, 
+        unique=True, 
+        verbose_name="Nro. Serie / IMEI",
+        help_text="Clave única para identificar el equipo."
+    )
     
-    # Datos propios del equipo (con tus ajustes)
-    numero_serie = models.CharField(max_length=100, unique=True, verbose_name="Número de Serie")
-    # Nuevo campo para celulares
-    imei = models.CharField(max_length=15, unique=True, null=True, blank=True, verbose_name="IMEI")
-    # Nuevo campo para garantía
-    fecha_compra = models.DateField(null=True, blank=True, verbose_name="Fecha de Compra") 
-
+    # Nuevas Claves Foráneas de Catálogo
+    tipo = models.ForeignKey(TipoEquipo, on_delete=models.SET_NULL, null=True, verbose_name="Tipo de Equipo")
+    marca = models.ForeignKey(Marca, on_delete=models.SET_NULL, null=True, verbose_name="Marca")
+    modelo = models.CharField(max_length=100, verbose_name="Modelo", help_text="Ej. iPhone 12, XPS 13") # Mantenemos modelo como texto libre para descripciones específicas
+    
+    # Nuevos campos de Descripción y Estado (no obligatorios)
+    accesorios = models.TextField(blank=True, verbose_name="Accesorios Entregados")
+    estado_general = models.TextField(blank=True, verbose_name="Estado General y Estético")
+    
+    # Campo de Garantía
+    fecha_compra = models.DateField(blank=True, null=True, verbose_name="Fecha de Compra")
+    
+    # El campo imei anterior ahora está unificado en serie_imei, lo quitamos si existía.
+    
     def __str__(self):
-        return f"{self.numero_serie} ({self.cliente.nombre})"
+        # Muestra el tipo y la marca para una mejor identificación
+        return f"{self.tipo} {self.marca} - {self.modelo} (SN/IMEI: {self.serie_imei})"
 
+    # Nuevo método para comprobar si está en garantía (ejemplo de 1 año)
+    @property
+    def en_garantia(self):
+        if self.fecha_compra:
+            from datetime import date, timedelta
+            return self.fecha_compra + timedelta(days=365) >= date.today()
+        return False
+    
 # ----------------------------------------------------------------------
 # 3. TRANSACCIONES (Reparacion y Detalle)
 # ----------------------------------------------------------------------
@@ -151,3 +212,7 @@ class DetalleRepuestoReparacion(models.Model):
 
     def __str__(self):
         return f"{self.cantidad} x {self.repuesto.descripcion} en Rep. #{self.reparacion.id}"
+    
+
+
+

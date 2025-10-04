@@ -12,6 +12,9 @@ from .models import Cliente, Equipo, Reparacion
 from .forms import ClienteForm, EquipoForm, ReparacionForm, ReparacionUpdateForm
 from django.http import JsonResponse 
 from django.views.decorators.http import require_GET
+from .models import TipoEquipo # Asegúrate de importar tu modelo TipoEquipo
+from .forms import TipoEquipoForm # Asegúrate de importar el formulario
+
 
 
 class ReparacionListView(ListView):
@@ -266,3 +269,39 @@ def buscar_cliente_por_clave(request):
         datos_cliente = {'existe': False}
         
     return JsonResponse(datos_cliente)
+
+
+@require_POST # Solo permite peticiones POST
+def guardar_tipo_equipo(request):
+    """
+    Recibe la petición del modal, valida el nombre del nuevo tipo y lo guarda.
+    """
+    form = TipoEquipoForm(request.POST) 
+    
+    if form.is_valid():
+        try:
+            # 1. Guarda el nuevo tipo en la base de datos
+            tipo = form.save()
+            
+            # 2. Devuelve una respuesta JSON al frontend con éxito
+            return JsonResponse({
+                'success': True,
+                'id': tipo.pk,
+                'nombre': tipo.nombre
+            })
+        except Exception as e:
+            # Captura un error de base de datos (ej. UNIQUE constraint si ya existe)
+             return JsonResponse({
+                'success': False,
+                'errors': {'nombre': [{'message': "Este tipo de equipo ya existe.", 'code': 'unique'}]}
+            }, status=400) 
+    else:
+        # Devuelve un error de validación con los mensajes del formulario (ej. campo vacío)
+        # form.errors.as_json() es útil, pero para simplicidad, extraemos solo el mensaje del campo 'nombre'.
+        error_data = form.errors.as_data()
+        nombre_error_message = str(error_data['nombre'][0].message) if 'nombre' in error_data else "Error de validación."
+        
+        return JsonResponse({
+            'success': False,
+            'errors': {'nombre': [{'message': nombre_error_message, 'code': 'invalid'}]}
+        }, status=400) # El código 400 (Bad Request) es clave para el JS

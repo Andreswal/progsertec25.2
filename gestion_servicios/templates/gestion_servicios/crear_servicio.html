@@ -79,6 +79,41 @@
                 Datos del Equipo
             </div>
             <div class="card-body">
+                
+                <div class="row">
+                    <div class="col-md-4 mb-3">
+                        <label for="{{ equipo_form.serie_imei.id_for_label }}" class="form-label">Nro. Serie / IMEI</label>
+                        {{ equipo_form.serie_imei }}
+                        {% for error in equipo_form.serie_imei.errors %}
+                            <div class="text-danger small">{{ error }}</div>
+                        {% endfor %}
+                    </div>
+
+                    <div class="col-md-4 mb-3">
+                        <label for="{{ equipo_form.tipo.id_for_label }}" class="form-label d-block">Tipo de Equipo</label>
+                    
+                        <div class="input-group">
+                            {{ equipo_form.tipo }} 
+                    
+                            <button class="btn btn-outline-secondary" type="button" data-bs-toggle="modal" data-bs-target="#modalNuevoTipo" title="Añadir nuevo tipo de equipo">
+                                <i class="fas fa-plus"></i>
+                            </button>
+                        </div>
+                    
+                        {% for error in equipo_form.tipo.errors %}
+                            <div class="text-danger small">{{ error }}</div>
+                        {% endfor %}
+                    </div>
+                    
+                    <div class="col-md-4 mb-3">
+                        <label for="{{ equipo_form.marca.id_for_label }}" class="form-label">Marca</label>
+                        {{ equipo_form.marca }}
+                        {% for error in equipo_form.marca.errors %}
+                            <div class="text-danger small">{{ error }}</div>
+                        {% endfor %}
+                    </div>
+                </div>
+
                 <div class="row">
                     <div class="col-md-4 mb-3">
                         <label for="{{ equipo_form.modelo.id_for_label }}" class="form-label">Modelo</label>
@@ -87,49 +122,35 @@
                             <div class="text-danger small">{{ error }}</div>
                         {% endfor %}
                     </div>
+                    
                     <div class="col-md-4 mb-3">
-                        <label for="{{ equipo_form.numero_serie.id_for_label }}" class="form-label">Número de Serie (SN)</label>
-                        {{ equipo_form.numero_serie }}
-                        {% for error in equipo_form.numero_serie.errors %}
-                            <div class="text-danger small">{{ error }}</div>
-                        {% endfor %}
-                    </div>
-                    <div class="col-md-4 mb-3">
-                        <label for="{{ equipo_form.imei.id_for_label }}" class="form-label">IMEI/Código</label>
-                        {{ equipo_form.imei }}
-                        {% for error in equipo_form.imei.errors %}
-                            <div class="text-danger small">{{ error }}</div>
-                        {% endfor %}
-                    </div>
-                </div>
-                <div class="row">
-                    <div class="col-md-4 mb-3">
-                        <label for="{{ equipo_form.fecha_compra.id_for_label }}" class="form-label">Fecha de Compra</label>
+                        <label for="{{ equipo_form.fecha_compra.id_for_label }}" class="form-label">Fecha de Compra (Garantía)</label>
                         {{ equipo_form.fecha_compra }}
                         {% for error in equipo_form.fecha_compra.errors %}
                             <div class="text-danger small">{{ error }}</div>
                         {% endfor %}
                     </div>
-                    </div>
-            </div>
-        </div>
 
-        <div class="card mb-4">
-            <div class="card-header bg-secondary text-white">
-                Falla y Técnico
-            </div>
-            <div class="card-body">
+                    <div class="col-md-4 mb-3 align-self-end">
+                        <span id="garantia-status" class="badge bg-warning p-2" style="display:none;">
+                            EQUIPO EN GARANTÍA DE COMPRA
+                        </span>
+                    </div>
+
+                </div>
+                
                 <div class="mb-3">
-                    <label for="{{ reparacion_form.falla_reportada.id_for_label }}" class="form-label">Falla Reportada por el Cliente</label>
-                    {{ reparacion_form.falla_reportada }}
-                    {% for error in reparacion_form.falla_reportada.errors %}
+                    <label for="{{ equipo_form.accesorios.id_for_label }}" class="form-label">Accesorios Entregados (Opcional)</label>
+                    {{ equipo_form.accesorios }}
+                    {% for error in equipo_form.accesorios.errors %}
                         <div class="text-danger small">{{ error }}</div>
                     {% endfor %}
                 </div>
+                
                 <div class="mb-3">
-                    <label for="{{ reparacion_form.tecnico_asignado.id_for_label }}" class="form-label">Técnico Asignado (Opcional)</label>
-                    {{ reparacion_form.tecnico_asignado }}
-                    {% for error in reparacion_form.tecnico_asignado.errors %}
+                    <label for="{{ equipo_form.estado_general.id_for_label }}" class="form-label">Estado General y Estético (Opcional)</label>
+                    {{ equipo_form.estado_general }}
+                    {% for error in equipo_form.modelo.errors %}
                         <div class="text-danger small">{{ error }}</div>
                     {% endfor %}
                 </div>
@@ -141,6 +162,84 @@
     </form>
 {% endblock %}
 
+
+<div class="modal fade" id="modalNuevoTipo" tabindex="-1" aria-labelledby="modalNuevoTipoLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form id="formNuevoTipo" method="post" action="{% url 'guardar_tipo_equipo' %}">
+                {% csrf_token %}
+                <div class="modal-header">
+                    <h5 class="modal-title" id="modalNuevoTipoLabel">Añadir Nuevo Tipo de Equipo</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="nuevo_tipo_nombre" class="form-label">Nombre del Tipo</label>
+                        <input type="text" class="form-control" id="nuevo_tipo_nombre" name="nombre" required>
+                    </div>
+                    <div id="tipo-error-msg" class="text-danger small" style="display:none;"></div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+                    <button type="submit" class="btn btn-primary">Guardar Tipo</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+
 {% block scripts %}
 <script src="{% static 'gestion_servicios/js/autocomplete.js' %}"></script>
+<script src="{% static 'gestion_servicios/js/garantia.js' %}"></script>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // --- Lógica de Modal para Tipo de Equipo ---
+        const formNuevoTipo = document.getElementById('formNuevoTipo');
+        const selectTipo = document.getElementById('id_tipo'); // El Select de Tipo de Equipo
+        const modalTipo = new bootstrap.Modal(document.getElementById('modalNuevoTipo'));
+        const errorDivTipo = document.getElementById('tipo-error-msg');
+        
+        if (formNuevoTipo) {
+            formNuevoTipo.addEventListener('submit', function(e) {
+                e.preventDefault();
+                errorDivTipo.style.display = 'none';
+
+                fetch(formNuevoTipo.action, {
+                    method: 'POST',
+                    body: new FormData(formNuevoTipo), // Envía los datos del formulario
+                    headers: {
+                        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                    }
+                })
+                .then(response => {
+                    // Si la respuesta no es 2xx (ej. 400 por error de validación)
+                    if (!response.ok) {
+                        return response.json().then(data => { throw data; });
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    if (data.success) {
+                        // 1. Agregar la nueva opción al SELECT y seleccionarla
+                        const newOption = new Option(data.nombre, data.id, true, true);
+                        selectTipo.add(newOption);
+                        
+                        // 2. Ocultar el modal y resetear el formulario
+                        modalTipo.hide();
+                        formNuevoTipo.reset();
+                    }
+                })
+                .catch(error => {
+                    console.error('Error al guardar tipo:', error);
+                    // Muestra el error de validación
+                    const msg = error.errors ? error.errors.nombre[0].message : 'Error desconocido al guardar.';
+                    errorDivTipo.textContent = msg;
+                    errorDivTipo.style.display = 'block';
+                });
+            });
+        }
+    });
+</script>
 {% endblock scripts %}

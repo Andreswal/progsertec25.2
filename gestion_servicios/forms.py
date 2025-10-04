@@ -2,7 +2,7 @@
 # gestion_servicios/forms.py
 
 from django import forms
-from .models import Cliente, Equipo, Reparacion
+from .models import Cliente, Equipo, Reparacion, TipoEquipo, Marca
 
 # ----------------------------------------------------------------------
 # 1. Formularios de Creación (Recepción)
@@ -24,20 +24,20 @@ class ClienteForm(forms.ModelForm):
             'email': forms.EmailInput(attrs={'class': 'form-control'}), # Nuevo
         }
 
-# Usado en ReparacionCreateView
 class EquipoForm(forms.ModelForm):
-    # NOTA: Cliente NO se incluye porque se asigna en la vista (request.POST no tiene este campo)
     class Meta:
         model = Equipo
-        fields = ['modelo', 'numero_serie', 'imei', 'fecha_compra']
+        fields = ['serie_imei', 'tipo', 'marca', 'modelo', 'accesorios', 'estado_general', 'fecha_compra']
         widgets = {
-             # El cliente necesita ingresar el número de serie
+            'serie_imei': forms.TextInput(attrs={'class': 'form-control', 'id': 'id_serie_imei'}),
+            'tipo': forms.Select(attrs={'class': 'form-control', 'id': 'id_tipo'}), # ID importante para JS
+            'marca': forms.Select(attrs={'class': 'form-control', 'id': 'id_marca'}), # ID importante para JS
             'modelo': forms.TextInput(attrs={'class': 'form-control'}),
-            'numero_serie': forms.TextInput(attrs={'class': 'form-control'}),
-            'imei': forms.TextInput(attrs={'class': 'form-control'}), # Nuevo
-            'fecha_compra': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}), # Nuevo (Usamos type=date para selector)
-        
+            'accesorios': forms.Textarea(attrs={'class': 'form-control', 'rows': 2}),
+            'estado_general': forms.Textarea(attrs={'class': 'form-control', 'rows': 2}),
+            'fecha_compra': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}), 
         }
+        
 
 # Usado en ReparacionCreateView
 class ReparacionForm(forms.ModelForm):
@@ -69,4 +69,14 @@ class ReparacionUpdateForm(forms.ModelForm):
         ]
         widgets = {
             'informe_tecnico': forms.Textarea(attrs={'rows': 5}),
+        }
+        
+
+class TipoEquipoForm(forms.ModelForm):
+    """Formulario simple para crear TipoEquipo desde el modal."""
+    class Meta:
+        model = TipoEquipo
+        fields = ['nombre']
+        widgets = {
+             'nombre': forms.TextInput(attrs={'class': 'form-control'})
         }
