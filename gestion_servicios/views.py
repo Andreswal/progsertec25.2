@@ -6,15 +6,19 @@ from django.db import transaction
 from django.contrib import messages
 from django.views.decorators.http import require_POST
 from django.utils import timezone
+from django.http import JsonResponse 
+
 
 # Importaciones específicas de la app
 from .models import Cliente, Equipo, Reparacion
 from .forms import ClienteForm, EquipoForm, ReparacionForm, ReparacionUpdateForm
-from django.http import JsonResponse 
 from django.views.decorators.http import require_GET
 from .models import TipoEquipo # Asegúrate de importar tu modelo TipoEquipo
 from .forms import TipoEquipoForm # Asegúrate de importar el formulario
-
+from .models import Marca
+from .forms import MarcaForm 
+from .models import Modelo
+from .forms import ModeloForm
 
 
 class ReparacionListView(ListView):
@@ -210,8 +214,31 @@ class ReparacionUpdateView(UpdateView):
         # 3. Guardar los cambios
         return super().form_valid(form)
     
-    
 
+def crear_servicio(request):
+    """
+    Renderiza el formulario principal y pasa las instancias de los formularios 
+    secundarios para los modales, asegurando la entrega del contexto.
+    """
+    
+    # Creamos un diccionario de contexto directamente
+    contexto_final = {
+        # Formularios principales
+        'cliente_form': ClienteForm(),
+        'equipo_form': EquipoForm(),
+        
+        # 🌟 FORMULARIOS PARA LOS MODALES (Punto Crítico) 🌟
+        'modelo_form': ModeloForm(), 
+        'marca_form': MarcaForm(), 
+        'tipo_equipo_form': TipoEquipoForm(),
+    }
+    
+    if request.method == 'POST':
+        # Aquí iría tu lógica POST (guardado de la Orden de Servicio)
+        pass
+        
+    # La variable context se llama contexto_final, asegurando que no haya conflictos
+    return render(request, 'gestion_servicios/crear_servicio.html', contexto_final)
 
 @require_POST
 def cerrar_servicio_view(request, pk):
@@ -270,38 +297,232 @@ def buscar_cliente_por_clave(request):
         
     return JsonResponse(datos_cliente)
 
+# ----------------------------------------------------------------------
+# FUNCIÓN 1: GUARDAR TIPO DE EQUIPO (Modal)
+# ----------------------------------------------------------------------
 
-@require_POST # Solo permite peticiones POST
+@require_POST
 def guardar_tipo_equipo(request):
-    """
-    Recibe la petición del modal, valida el nombre del nuevo tipo y lo guarda.
-    """
-    form = TipoEquipoForm(request.POST) 
+    """Recibe la petición del modal, valida y guarda el nuevo tipo."""
+    form = TipoEquipoForm(request.POST)
     
     if form.is_valid():
         try:
-            # 1. Guarda el nuevo tipo en la base de datos
             tipo = form.save()
-            
-            # 2. Devuelve una respuesta JSON al frontend con éxito
             return JsonResponse({
                 'success': True,
                 'id': tipo.pk,
                 'nombre': tipo.nombre
             })
         except Exception as e:
-            # Captura un error de base de datos (ej. UNIQUE constraint si ya existe)
-             return JsonResponse({
+            return JsonResponse({
                 'success': False,
-                'errors': {'nombre': [{'message': "Este tipo de equipo ya existe.", 'code': 'unique'}]}
-            }, status=400) 
+                'errors': {'nombre': [str(e)]}
+            }, status=400)
     else:
-        # Devuelve un error de validación con los mensajes del formulario (ej. campo vacío)
-        # form.errors.as_json() es útil, pero para simplicidad, extraemos solo el mensaje del campo 'nombre'.
-        error_data = form.errors.as_data()
-        nombre_error_message = str(error_data['nombre'][0].message) if 'nombre' in error_data else "Error de validación."
+        # Extraer errores del formulario
+        cleaned_errors = {}
+        for field, errors in form.errors.as_data().items():
+            cleaned_errors[field] = [str(e.message) for e in errors]
         
         return JsonResponse({
             'success': False,
-            'errors': {'nombre': [{'message': nombre_error_message, 'code': 'invalid'}]}
-        }, status=400) # El código 400 (Bad Request) es clave para el JS
+            'errors': cleaned_errors
+        }, status=400)
+
+# ----------------------------------------------------------------------
+# FUNCIÓN 4: BUSCAR TIPO DE EQUIPO (Autocompletado)
+# ----------------------------------------------------------------------
+
+@require_GET
+def buscar_tipo_equipo(request):
+    """Busca tipos de equipo que coincidan con la entrada del usuario."""
+    term = request.GET.get('term', '')
+    
+    if term:
+        tipos = TipoEquipo.objects.filter(nombre__icontains=term).values('id', 'nombre')[:10]
+        resultados = [{'id': tipo['id'], 'text': tipo['nombre']} for tipo in tipos]
+        return JsonResponse(resultados, safe=False)
+    
+    return JsonResponse([], safe=False)
+
+# ----------------------------------------------------------------------
+# FUNCIÓN 5: BUSCAR MARCA (Autocompletado)
+# ----------------------------------------------------------------------
+@require_GET
+def buscar_marca(request):
+    """Busca marcas que coincidan con la entrada del usuario."""
+    term = request.GET.get('term', '')
+    
+    if term:
+        marcas = Marca.objects.filter(nombre__icontains=term).values('id', 'nombre')[:10]
+        resultados = [{'id': marca['id'], 'text': marca['nombre']} for marca in marcas]
+        return JsonResponse(resultados, safe=False)
+    
+    return JsonResponse([], safe=False)
+
+
+# ----------------------------------------------------------------------
+# FUNCIÓN 2: GUARDAR MARCA (Modal)
+# ----------------------------------------------------------------------
+
+@require_POST
+def guardar_marca(request):
+    """Recibe la petición del modal de marca por AJAX y guarda la nueva Marca."""
+    form = MarcaForm(request.POST)
+    
+    if form.is_valid():
+        try:
+            marca = form.save()
+            return JsonResponse({
+                'success': True,
+                'id': marca.pk,
+                'nombre': marca.nombre
+            })
+        except Exception as e:
+            return JsonResponse({
+                'success': False,
+                'errors': {'nombre': [str(e)]}
+            }, status=400)
+    else:
+        # Extraer errores del formulario
+        cleaned_errors = {}
+        for field, errors in form.errors.as_data().items():
+            cleaned_errors[field] = [str(e.message) for e in errors]
+        
+        return JsonResponse({
+            'success': False,
+            'errors': cleaned_errors
+        }, status=400)
+
+        
+        
+# ----------------------------------------------------------------------
+# FUNCIÓN 3: GUARDAR MODELO (Modal) - CORREGIDA 🔥
+# ----------------------------------------------------------------------
+
+@require_POST
+def guardar_modelo(request):
+    """
+    Crea un nuevo Modelo asociado a una Marca.
+    Recibe el ID de la Marca desde el formulario principal.
+    """
+    
+    # 🔍 DEBUG: Ver todos los datos POST recibidos
+    print("=" * 60)
+    print("📥 Datos POST recibidos en guardar_modelo:")
+    for key, value in request.POST.items():
+        print(f"  {key}: {value}")
+    print("=" * 60)
+    
+    # 🌟 PASO 1: Obtener el ID de la Marca
+    marca_id = request.POST.get('marca')
+    
+    if not marca_id:
+        return JsonResponse({
+            'success': False,
+            'errors': {
+                '__all__': ["⚠️ Error: No se recibió el ID de la Marca. Asegúrate de seleccionar una Marca primero."]
+            }
+        }, status=400)
+    
+    # 🌟 PASO 2: Verificar que la Marca existe
+    try:
+        marca_objeto = Marca.objects.get(pk=marca_id)
+        print(f"✅ Marca encontrada: {marca_objeto.nombre} (ID: {marca_id})")
+    except Marca.DoesNotExist:
+        return JsonResponse({
+            'success': False,
+            'errors': {
+                '__all__': [f"❌ Error: La Marca con ID {marca_id} no existe en la base de datos."]
+            }
+        }, status=400)
+    except ValueError:
+        return JsonResponse({
+            'success': False,
+            'errors': {
+                '__all__': [f"❌ Error: El ID de Marca '{marca_id}' no es válido."]
+            }
+        }, status=400)
+    
+    # 🌟 PASO 3: Validar el formulario del Modelo
+    form = ModeloForm(request.POST)
+    
+    if form.is_valid():
+        try:
+            # 🌟 PASO 4: Guardar el Modelo asociándolo a la Marca
+            modelo = form.save(commit=False)
+            modelo.marca = marca_objeto
+            modelo.save()
+            
+            print(f"✅ Modelo creado exitosamente: {modelo.modelo} (ID: {modelo.pk})")
+            
+            # 🌟 PASO 5: Devolver respuesta exitosa
+            return JsonResponse({
+                'success': True,
+                'id': modelo.pk,
+                'nombre': modelo.modelo,
+                'marca_id': marca_objeto.pk,
+                'marca_nombre': marca_objeto.nombre
+            })
+        
+        except Exception as e:
+            print(f"❌ Error al guardar el modelo: {str(e)}")
+            return JsonResponse({
+                'success': False,
+                'errors': {
+                    '__all__': [f"Error al guardar el modelo: {str(e)}"]
+                }
+            }, status=400)
+    
+    else:
+        # 🌟 PASO 6: Manejar errores de validación del formulario
+        print("❌ Errores de validación del formulario:")
+        print(form.errors)
+        
+        cleaned_errors = {}
+        for field, errors in form.errors.as_data().items():
+            cleaned_errors[field] = [str(e.message) for e in errors]
+        
+        return JsonResponse({
+            'success': False,
+            'errors': cleaned_errors
+        }, status=400)
+
+
+# ----------------------------------------------------------------------
+# FUNCIÓN 6: BUSCAR MODELO (Autocompletado)
+# ----------------------------------------------------------------------
+@require_GET
+def buscar_modelo(request):
+    """Busca modelos por nombre para autocompletado."""
+    term = request.GET.get('term', '')
+
+    if term:
+        # Opcional: Filtrar por marca si ya está seleccionada
+        # marca_id = request.GET.get('marca_id')
+        # if marca_id:
+        #     modelos = Modelo.objects.filter(nombre__icontains=term, marca_id=marca_id)
+        
+        modelos = Modelo.objects.filter(modelo__icontains=term).values('id', 'modelo')[:10]
+        resultados = [{'id': modelo['id'], 'text': modelo['modelo']} for modelo in modelos]
+        return JsonResponse(resultados, safe=False)
+
+    return JsonResponse([], safe=False)
+
+
+
+# ----------------------------------------------------------------------
+# FUNCIÓN 7: BUSCAR EQUIPO EXISTENTE (Autocompletado)
+# ----------------------------------------------------------------------
+@require_GET
+def buscar_equipo_existente(request):
+    """Busca equipos existentes por número de serie/IMEI."""
+    term = request.GET.get('term', '')
+
+    if term:
+        equipos = Equipo.objects.filter(serie_imei__icontains=term).values('serie_imei')[:10]
+        resultados = [{'value': equipo['serie_imei']} for equipo in equipos]
+        return JsonResponse(resultados, safe=False)
+
+    return JsonResponse([], safe=False)

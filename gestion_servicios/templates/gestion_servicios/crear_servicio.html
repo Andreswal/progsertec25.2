@@ -9,6 +9,8 @@
 {% block content %}
     <h1 class="mb-4">Ingreso de Nueva Orden de Servicio</h1>
     
+    
+
     <form method="post" class="needs-validation" novalidate>
         {% csrf_token %}
 
@@ -81,6 +83,7 @@
             <div class="card-body">
                 
                 <div class="row">
+                    <!-- Nro. Serie / IMEI -->
                     <div class="col-md-4 mb-3">
                         <label for="{{ equipo_form.serie_imei.id_for_label }}" class="form-label">Nro. Serie / IMEI</label>
                         {{ equipo_form.serie_imei }}
@@ -88,41 +91,78 @@
                             <div class="text-danger small">{{ error }}</div>
                         {% endfor %}
                     </div>
-
+        
+                    <!-- Tipo de Equipo con Autocompletado -->
                     <div class="col-md-4 mb-3">
-                        <label for="{{ equipo_form.tipo.id_for_label }}" class="form-label d-block">Tipo de Equipo</label>
-                    
+                        <label for="tipo-autocomplete-input" class="form-label d-block">Tipo de Equipo</label>
+                        
                         <div class="input-group">
-                            {{ equipo_form.tipo }} 
-                    
+                            <!-- Campo de texto visible -->
+                            <input type="text" id="tipo-autocomplete-input" class="form-control" placeholder="Escribe el tipo de equipo...">
+                            
+                            <!-- 🌟 CAMBIO: Input hidden en lugar de select -->
+                            <input type="hidden" name="tipo" id="id_tipo">
+                            
                             <button class="btn btn-outline-secondary" type="button" data-bs-toggle="modal" data-bs-target="#modalNuevoTipo" title="Añadir nuevo tipo de equipo">
-                                <i class="fas fa-plus"></i>
+                                +
                             </button>
                         </div>
-                    
+                        
                         {% for error in equipo_form.tipo.errors %}
                             <div class="text-danger small">{{ error }}</div>
                         {% endfor %}
                     </div>
                     
+                    <!-- Marca con Autocompletado -->
                     <div class="col-md-4 mb-3">
-                        <label for="{{ equipo_form.marca.id_for_label }}" class="form-label">Marca</label>
-                        {{ equipo_form.marca }}
+                        <label for="marca-autocomplete-input" class="form-label d-block">Marca</label>
+                        
+                        <div class="input-group">
+                            <!-- Campo de texto visible -->
+                            <input type="text" id="marca-autocomplete-input" class="form-control" placeholder="Escribe la marca...">
+                            
+                            <!-- 🌟 CAMBIO: Input hidden en lugar de select -->
+                            <input type="hidden" name="marca" id="id_marca">
+                            
+                            <button class="btn btn-outline-secondary" type="button" 
+                                    data-bs-toggle="modal" 
+                                    data-bs-target="#modalNuevaMarca" 
+                                    title="Añadir nueva marca">
+                                +
+                            </button>
+                        </div>
+                        
                         {% for error in equipo_form.marca.errors %}
                             <div class="text-danger small">{{ error }}</div>
                         {% endfor %}
                     </div>
                 </div>
-
+        
                 <div class="row">
+                    <!-- Modelo con Autocompletado -->
                     <div class="col-md-4 mb-3">
-                        <label for="{{ equipo_form.modelo.id_for_label }}" class="form-label">Modelo</label>
-                        {{ equipo_form.modelo }}
+                        <label for="modelo-autocomplete-input" class="form-label">Modelo</label>
+                        <div class="input-group">
+                            <!-- Campo de texto visible -->
+                            <input type="text" class="form-control ui-autocomplete-input" 
+                                   id="modelo-autocomplete-input" placeholder="Escribe el modelo..." 
+                                   autocomplete="off">
+                            
+                            <!-- Input hidden para el ID del modelo -->
+                            <input type="hidden" name="modelo" id="id_modelo">
+                            
+                            <button class="btn btn-outline-secondary" type="button" 
+                                    data-bs-toggle="modal" data-bs-target="#modalNuevoModelo" 
+                                    id="btnAbrirModalModelo" title="Añadir nuevo modelo">
+                                +
+                            </button>
+                        </div>
                         {% for error in equipo_form.modelo.errors %}
                             <div class="text-danger small">{{ error }}</div>
                         {% endfor %}
                     </div>
                     
+                    <!-- Fecha de Compra -->
                     <div class="col-md-4 mb-3">
                         <label for="{{ equipo_form.fecha_compra.id_for_label }}" class="form-label">Fecha de Compra (Garantía)</label>
                         {{ equipo_form.fecha_compra }}
@@ -130,15 +170,16 @@
                             <div class="text-danger small">{{ error }}</div>
                         {% endfor %}
                     </div>
-
+        
+                    <!-- Badge de Garantía -->
                     <div class="col-md-4 mb-3 align-self-end">
                         <span id="garantia-status" class="badge bg-warning p-2" style="display:none;">
                             EQUIPO EN GARANTÍA DE COMPRA
                         </span>
                     </div>
-
                 </div>
                 
+                <!-- Accesorios -->
                 <div class="mb-3">
                     <label for="{{ equipo_form.accesorios.id_for_label }}" class="form-label">Accesorios Entregados (Opcional)</label>
                     {{ equipo_form.accesorios }}
@@ -147,10 +188,11 @@
                     {% endfor %}
                 </div>
                 
+                <!-- Estado General -->
                 <div class="mb-3">
                     <label for="{{ equipo_form.estado_general.id_for_label }}" class="form-label">Estado General y Estético (Opcional)</label>
                     {{ equipo_form.estado_general }}
-                    {% for error in equipo_form.modelo.errors %}
+                    {% for error in equipo_form.estado_general.errors %}
                         <div class="text-danger small">{{ error }}</div>
                     {% endfor %}
                 </div>
@@ -160,44 +202,99 @@
         <button type="submit" class="btn btn-primary btn-lg">Generar Orden de Servicio</button>
         <a href="{% url 'lista_servicios' %}" class="btn btn-secondary btn-lg">Cancelar</a>
     </form>
+
+    <div class="modal fade" id="modalNuevoTipo" tabindex="-1" aria-labelledby="modalNuevoTipoLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <form id="formNuevoTipo" method="post" action="{% url 'guardar_tipo_equipo' %}">
+                    {% csrf_token %}
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="modalNuevoTipoLabel">Añadir Nuevo Tipo de Equipo</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label for="nuevo_tipo_nombre" class="form-label">Nombre del Tipo</label>
+                            <input type="text" class="form-control" id="nuevo_tipo_nombre" name="nombre" required>
+                        </div>
+                        <div id="tipo-error-msg" class="text-danger small" style="display:none;"></div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+                        <button type="submit" class="btn btn-primary">Guardar Tipo</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="modalNuevaMarca" tabindex="-1" aria-labelledby="modalNuevaMarcaLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <form id="formNuevaMarca" method="post" action="{% url 'guardar_marca' %}">
+                    {% csrf_token %}
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="modalNuevaMarcaLabel">Añadir Nueva Marca</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label for="nueva_marca_nombre" class="form-label">Nombre de la Marca</label>
+                            <input type="text" class="form-control" id="nueva_marca_nombre" name="nombre" required>
+                        </div>
+                        <div id="marca-error-msg" class="text-danger small" style="display:none;"></div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+                        <button type="submit" class="btn btn-primary">Guardar Marca</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+
+    <div class="modal fade" id="modalNuevoModelo" tabindex="-1" ...>
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <form id="formNuevoModelo" action="{% url 'guardar_modelo' %}" method="post">
+                    {% csrf_token %}
+                    <div class="modal-header">...</div>
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label for="nueva_modelo_nombre" class="form-label">Nombre del Modelo</label>
+                            <input type="text" class="form-control" id="nueva_modelo_nombre" name="modelo" required>
+                        </div>
+                        
+                        <div id="modelo-error-msg" class="text-danger small" style="display:none;"></div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+                    
+                        <button type="submit" class="btn btn-primary">Guardar Modelo</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
 {% endblock %}
 
 
-<div class="modal fade" id="modalNuevoTipo" tabindex="-1" aria-labelledby="modalNuevoTipoLabel" aria-hidden="true">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <form id="formNuevoTipo" method="post" action="{% url 'guardar_tipo_equipo' %}">
-                {% csrf_token %}
-                <div class="modal-header">
-                    <h5 class="modal-title" id="modalNuevoTipoLabel">Añadir Nuevo Tipo de Equipo</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body">
-                    <div class="mb-3">
-                        <label for="nuevo_tipo_nombre" class="form-label">Nombre del Tipo</label>
-                        <input type="text" class="form-control" id="nuevo_tipo_nombre" name="nombre" required>
-                    </div>
-                    <div id="tipo-error-msg" class="text-danger small" style="display:none;"></div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
-                    <button type="submit" class="btn btn-primary">Guardar Tipo</button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
+
 
 
 {% block scripts %}
+
 <script src="{% static 'gestion_servicios/js/autocomplete.js' %}"></script>
 <script src="{% static 'gestion_servicios/js/garantia.js' %}"></script>
 
-<script>
+<<script>
     document.addEventListener('DOMContentLoaded', function() {
-        // --- Lógica de Modal para Tipo de Equipo ---
+        
+        // ============================================
+        // MODAL PARA NUEVO TIPO DE EQUIPO
+        // ============================================
         const formNuevoTipo = document.getElementById('formNuevoTipo');
-        const selectTipo = document.getElementById('id_tipo'); // El Select de Tipo de Equipo
         const modalTipo = new bootstrap.Modal(document.getElementById('modalNuevoTipo'));
         const errorDivTipo = document.getElementById('tipo-error-msg');
         
@@ -205,16 +302,15 @@
             formNuevoTipo.addEventListener('submit', function(e) {
                 e.preventDefault();
                 errorDivTipo.style.display = 'none';
-
+    
                 fetch(formNuevoTipo.action, {
                     method: 'POST',
-                    body: new FormData(formNuevoTipo), // Envía los datos del formulario
+                    body: new FormData(formNuevoTipo),
                     headers: {
                         'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
                     }
                 })
                 .then(response => {
-                    // Si la respuesta no es 2xx (ej. 400 por error de validación)
                     if (!response.ok) {
                         return response.json().then(data => { throw data; });
                     }
@@ -222,24 +318,334 @@
                 })
                 .then(data => {
                     if (data.success) {
-                        // 1. Agregar la nueva opción al SELECT y seleccionarla
-                        const newOption = new Option(data.nombre, data.id, true, true);
-                        selectTipo.add(newOption);
-                        
-                        // 2. Ocultar el modal y resetear el formulario
+                        // 1. Actualizar el campo de texto visible
+                        const inputTipo = document.getElementById('tipo-autocomplete-input');
+                        if (inputTipo) {
+                            inputTipo.value = data.nombre;
+                        }
+    
+                        // 2. Actualizar el input hidden con el ID
+                        const hiddenInputTipo = document.getElementById('id_tipo');
+                        if (hiddenInputTipo) {
+                            hiddenInputTipo.value = data.id;
+                        }
+    
+                        // 3. Cerrar modal y resetear
                         modalTipo.hide();
                         formNuevoTipo.reset();
+                        console.log('✅ Tipo creado:', data.nombre, 'ID:', data.id);
                     }
                 })
                 .catch(error => {
-                    console.error('Error al guardar tipo:', error);
-                    // Muestra el error de validación
-                    const msg = error.errors ? error.errors.nombre[0].message : 'Error desconocido al guardar.';
+                    console.error('❌ Error al guardar tipo:', error);
+                    let msg = 'Error desconocido al guardar el tipo de equipo.';
+                    if (error.errors && error.errors.nombre) {
+                        msg = error.errors.nombre[0];
+                    } else if (error.errors && error.errors.__all__) {
+                        msg = error.errors.__all__[0];
+                    }
                     errorDivTipo.textContent = msg;
                     errorDivTipo.style.display = 'block';
                 });
             });
         }
+    
+        // ============================================
+        // MODAL PARA NUEVA MARCA
+        // ============================================
+        const formNuevaMarca = document.getElementById('formNuevaMarca');
+        const modalMarca = new bootstrap.Modal(document.getElementById('modalNuevaMarca'));
+        const errorDivMarca = document.getElementById('marca-error-msg');
+        
+        if (formNuevaMarca) {
+            formNuevaMarca.addEventListener('submit', function(e) {
+                e.preventDefault();
+                errorDivMarca.style.display = 'none';
+    
+                fetch(formNuevaMarca.action, {
+                    method: 'POST',
+                    body: new FormData(formNuevaMarca),
+                    headers: {
+                        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                    }
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        return response.json().then(data => { throw data; });
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    if (data.success) {
+                        // 1. Actualizar el campo de texto visible
+                        const inputMarca = document.getElementById('marca-autocomplete-input');
+                        if (inputMarca) {
+                            inputMarca.value = data.nombre;
+                        }
+                        
+                        // 2. Actualizar el input hidden con el ID
+                        const hiddenInputMarca = document.getElementById('id_marca');
+                        if (hiddenInputMarca) {
+                            hiddenInputMarca.value = data.id;
+                        }
+                        
+                        // 3. Cerrar modal y resetear
+                        modalMarca.hide();
+                        formNuevaMarca.reset();
+                        console.log('✅ Marca creada:', data.nombre, 'ID:', data.id);
+                    }
+                })
+                .catch(error => {
+                    console.error('❌ Error al guardar marca:', error);
+                    let msg = 'Error desconocido al guardar la marca.';
+                    if (error.errors && error.errors.nombre) {
+                        msg = error.errors.nombre[0];
+                    } else if (error.errors && error.errors.__all__) {
+                        msg = error.errors.__all__[0];
+                    }
+                    errorDivMarca.textContent = msg;
+                    errorDivMarca.style.display = 'block';
+                });
+            });
+        }
+    
+        // ============================================
+        // MODAL PARA NUEVO MODELO (CORREGIDO) 🔥
+        // ============================================
+        const formNuevoModelo = document.getElementById('formNuevoModelo');
+        const modalModelo = new bootstrap.Modal(document.getElementById('modalNuevoModelo'));
+        const errorDivModelo = document.getElementById('modelo-error-msg');
+    
+        if (formNuevoModelo) {
+            formNuevoModelo.addEventListener('submit', function(e) {
+                e.preventDefault();
+                errorDivModelo.style.display = 'none';
+    
+                // 🌟 PASO 1: Capturar el ID de la Marca desde el input hidden
+                const hiddenInputMarca = document.getElementById('id_marca');
+                const idDeMarcaSeleccionada = hiddenInputMarca ? hiddenInputMarca.value : '';
+    
+                // 🌟 PASO 2: Debug - Ver qué valor tenemos
+                console.log('🔍 Marca ID capturado:', idDeMarcaSeleccionada);
+    
+                // 🌟 PASO 3: Validación estricta
+                if (!idDeMarcaSeleccionada || idDeMarcaSeleccionada === '') {
+                    errorDivModelo.textContent = '⚠️ Debes seleccionar o crear una Marca antes de crear un Modelo.';
+                    errorDivModelo.style.display = 'block';
+                    return;
+                }
+    
+                // 🌟 PASO 4: Crear FormData e inyectar la marca
+                const formData = new FormData(formNuevoModelo);
+                formData.set('marca', idDeMarcaSeleccionada);
+    
+                // Debug - Ver todo lo que se envía
+                console.log('📤 Datos a enviar:');
+                for (let [key, value] of formData.entries()) {
+                    console.log(`  ${key}: ${value}`);
+                }
+    
+                // 🌟 PASO 5: Enviar la petición
+                fetch(formNuevoModelo.action, {
+                    method: 'POST',
+                    body: formData,
+                    headers: {
+                        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                    }
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        return response.json().then(data => { throw data; });
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    if (data.success) {
+                        // 1. Actualizar el campo visible
+                        const inputModelo = document.getElementById('modelo-autocomplete-input');
+                        if (inputModelo) {
+                            inputModelo.value = data.nombre;
+                        }
+                        
+                        // 2. Actualizar el input hidden
+                        const hiddenInputModelo = document.getElementById('id_modelo');
+                        if (hiddenInputModelo) {
+                            hiddenInputModelo.value = data.id;
+                        }
+    
+                        // 3. Cerrar modal y resetear
+                        modalModelo.hide();
+                        formNuevoModelo.reset();
+                        console.log('✅ Modelo creado:', data.nombre, 'ID:', data.id);
+                    }
+                })
+                .catch(error => {
+                    console.error('❌ Error al guardar modelo:', error);
+                    
+                    let msg = 'Error desconocido al guardar el modelo.';
+                    if (error.errors) {
+                        if (error.errors.modelo) {
+                            msg = error.errors.modelo[0];
+                        } else if (error.errors.__all__) {
+                            msg = error.errors.__all__[0];
+                        } else if (error.errors.marca) {
+                            msg = error.errors.marca[0];
+                        }
+                    }
+                    
+                    errorDivModelo.textContent = msg;
+                    errorDivModelo.style.display = 'block';
+                });
+            });
+        }
     });
-</script>
+    </script>
+
+<script>
+    $(document).ready(function() {
+        
+        // ============================================
+        // AUTOCOMPLETADO DE TIPO DE EQUIPO
+        // ============================================
+        var $hiddenTipo = $('#id_tipo');
+        var $inputTipo = $('#tipo-autocomplete-input');
+    
+        $inputTipo.autocomplete({
+            source: function(request, response) {
+                $.ajax({
+                    url: "{% url 'buscar_tipo_equipo' %}",
+                    dataType: "json",
+                    data: {
+                        term: request.term
+                    },
+                    success: function(data) {
+                        response($.map(data, function(item) {
+                            return {
+                                label: item.text,
+                                value: item.text,
+                                option_id: item.id
+                            };
+                        }));
+                    }
+                });
+            },
+            minLength: 2,
+            select: function(event, ui) {
+                // Actualizar el input hidden con el ID
+                $hiddenTipo.val(ui.item.option_id);
+                console.log("✅ Tipo seleccionado, ID:", ui.item.option_id);
+            }
+        });
+        
+        // Resetear si el usuario borra el campo
+        $inputTipo.on('change', function() {
+            if ($(this).val() === '') {
+                $hiddenTipo.val('');
+            }
+        });
+    
+        // ============================================
+        // AUTOCOMPLETADO DE MARCA
+        // ============================================
+        var $hiddenMarca = $('#id_marca');
+        var $inputMarca = $('#marca-autocomplete-input');
+    
+        $inputMarca.autocomplete({
+            source: function(request, response) {
+                $.ajax({
+                    url: "{% url 'buscar_marca' %}",
+                    dataType: "json",
+                    data: {
+                        term: request.term
+                    },
+                    success: function(data) {
+                        response($.map(data, function(item) {
+                            return {
+                                label: item.text,
+                                value: item.text,
+                                option_id: item.id
+                            };
+                        }));
+                    }
+                });
+            },
+            minLength: 2,
+            select: function(event, ui) {
+                // Actualizar el input hidden con el ID
+                $hiddenMarca.val(ui.item.option_id);
+                console.log("✅ Marca seleccionada, ID:", ui.item.option_id);
+            }
+        });
+        
+        // Resetear si el usuario borra el campo
+        $inputMarca.on('change', function() {
+            if ($(this).val() === '') {
+                $hiddenMarca.val('');
+            }
+        });
+    
+        // ============================================
+        // AUTOCOMPLETADO DE MODELO
+        // ============================================
+        var $hiddenModelo = $('#id_modelo');
+        var $inputModelo = $('#modelo-autocomplete-input');
+    
+        $inputModelo.autocomplete({
+            source: function(request, response) {
+                $.ajax({
+                    url: "{% url 'buscar_modelo' %}",
+                    dataType: "json",
+                    data: {
+                        term: request.term
+                    },
+                    success: function(data) {
+                        response($.map(data, function(item) {
+                            return {
+                                label: item.text,
+                                value: item.text,
+                                option_id: item.id
+                            };
+                        }));
+                    }
+                });
+            },
+            minLength: 2,
+            select: function(event, ui) {
+                $hiddenModelo.val(ui.item.option_id);
+                console.log("✅ Modelo seleccionado, ID:", ui.item.option_id);
+            }
+        });
+    
+        $inputModelo.on('change', function() {
+            if ($(this).val() === '') {
+                $hiddenModelo.val('');
+            }
+        });
+    
+        // ============================================
+        // AUTOCOMPLETADO DE NRO SERIE/IMEI
+        // ============================================
+        var $inputSerie = $('#id_serie_imei');
+    
+        $inputSerie.autocomplete({
+            source: function(request, response) {
+                $.ajax({
+                    url: "{% url 'buscar_equipo_existente' %}",
+                    dataType: "json",
+                    data: {
+                        term: request.term
+                    },
+                    success: function(data) {
+                        response(data);
+                    }
+                });
+            },
+            minLength: 3,
+            select: function(event, ui) {
+                alert("¡Cuidado! Este número de serie/IMEI ya está registrado en la base de datos.");
+            }
+        });
+    });
+    </script>
 {% endblock scripts %}
+

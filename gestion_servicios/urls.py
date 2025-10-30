@@ -24,5 +24,19 @@ urlpatterns = [
     
     # 🌟 NUEVA URL para el modal AJAX
     path('equipo/guardar-tipo/', views.guardar_tipo_equipo, name='guardar_tipo_equipo'),
+    
+    # 🌟 NUEVA URL para búsqueda de autocompletado 🌟
+    path('equipo/buscar-tipo/', views.buscar_tipo_equipo, name='buscar_tipo_equipo'),
+
+    # URLs de MARCA
+    path('equipo/guardar-marca/', views.guardar_marca, name='guardar_marca'),
+    # 🌟 NUEVA URL para búsqueda de autocompletado de MARCA 🌟
+    path('equipo/buscar-marca/', views.buscar_marca, name='buscar_marca'), 
+    
+    
+    path('equipo/guardar-modelo/', views.guardar_modelo, name='guardar_modelo'),
+    path('equipo/buscar-modelo/', views.buscar_modelo, name='buscar_modelo'),
+
+    path('equipo/buscar-serie/', views.buscar_equipo_existente, name='buscar_equipo_existente'),
 
 ]
