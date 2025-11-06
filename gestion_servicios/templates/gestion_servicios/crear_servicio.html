@@ -196,8 +196,46 @@
                         <div class="text-danger small">{{ error }}</div>
                     {% endfor %}
                 </div>
+
             </div>
         </div>
+
+        <!-- ============================================ -->
+    <!-- NUEVA SECCIÓN: DATOS DE LA REPARACIÓN -->
+    <!-- ============================================ -->
+    <div class="card mb-4">
+        <div class="card-header bg-secondary text-white">
+            Datos de la Reparación
+        </div>
+        <div class="card-body">
+            <!-- Técnico Asignado (Opcional) -->
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label for="{{ reparacion_form.tecnico_asignado.id_for_label }}" class="form-label">
+                        Técnico Asignado (Opcional)
+                    </label>
+                    {{ reparacion_form.tecnico_asignado }}
+                    {% for error in reparacion_form.tecnico_asignado.errors %}
+                        <div class="text-danger small">{{ error }}</div>
+                    {% endfor %}
+                </div>
+            </div>
+            
+            <!-- Falla Reportada (OBLIGATORIO) -->
+            <div class="mb-3">
+                <label for="{{ reparacion_form.falla_reportada.id_for_label }}" class="form-label">
+                    Falla Reportada por el Cliente <span class="text-danger">*</span>
+                </label>
+                {{ reparacion_form.falla_reportada }}
+                {% for error in reparacion_form.falla_reportada.errors %}
+                    <div class="text-danger small">{{ error }}</div>
+                {% endfor %}
+                <small class="form-text text-muted">
+                    Describe el problema reportado por el cliente (ej: "No enciende", "Pantalla rota", etc.)
+                </small>
+            </div>
+        </div>
+    </div>
 
         <button type="submit" class="btn btn-primary btn-lg">Generar Orden de Servicio</button>
         <a href="{% url 'lista_servicios' %}" class="btn btn-secondary btn-lg">Cancelar</a>
@@ -645,6 +683,93 @@
                 alert("¡Cuidado! Este número de serie/IMEI ya está registrado en la base de datos.");
             }
         });
+    });
+    </script>
+
+<script>
+    // ============================================
+    // VALIDACIÓN ANTES DE ENVIAR EL FORMULARIO
+    // Asegura que los campos hidden tengan valores
+    // ============================================
+    document.addEventListener('DOMContentLoaded', function() {
+        const form = document.querySelector('form[method="post"]');
+        
+        if (form) {
+            form.addEventListener('submit', function(e) {
+                // 🌟 PASO 1: Capturar campos de autocompletado
+                const inputTipo = document.getElementById('tipo-autocomplete-input');
+                const hiddenTipo = document.getElementById('id_tipo');
+                
+                const inputMarca = document.getElementById('marca-autocomplete-input');
+                const hiddenMarca = document.getElementById('id_marca');
+                
+                const inputModelo = document.getElementById('modelo-autocomplete-input');
+                const hiddenModelo = document.getElementById('id_modelo');
+                
+                // 🌟 PASO 2: Si el usuario escribió texto pero no seleccionó de la lista,
+                // copiar el texto al campo hidden para que Django lo procese
+                
+                if (inputTipo && inputTipo.value && !hiddenTipo.value) {
+                    console.log('⚠️ Tipo no tiene ID, usando texto:', inputTipo.value);
+                    hiddenTipo.value = inputTipo.value;
+                }
+                
+                if (inputMarca && inputMarca.value && !hiddenMarca.value) {
+                    console.log('⚠️ Marca no tiene ID, usando texto:', inputMarca.value);
+                    hiddenMarca.value = inputMarca.value;
+                }
+                
+                if (inputModelo && inputModelo.value && !hiddenModelo.value) {
+                    console.log('⚠️ Modelo no tiene ID, usando texto:', inputModelo.value);
+                    hiddenModelo.value = inputModelo.value;
+                }
+                
+                // 🌟 PASO 3: Debug - Ver qué valores se enviarán
+                console.log('📤 Valores a enviar:');
+                console.log('  Tipo:', hiddenTipo ? hiddenTipo.value : 'N/A');
+                console.log('  Marca:', hiddenMarca ? hiddenMarca.value : 'N/A');
+                console.log('  Modelo:', hiddenModelo ? hiddenModelo.value : 'N/A');
+                
+                // Permitir que el formulario se envíe
+                return true;
+            });
+        }
+    });
+    </script>
+
+<script>
+    // ============================================
+    // DEBUG: Mostrar errores del formulario en la consola
+    // ============================================
+    document.addEventListener('DOMContentLoaded', function() {
+        console.log('🔍 Iniciando debug de formulario...');
+        
+        // Buscar todos los elementos con clase 'text-danger' (errores de Django)
+        const errores = document.querySelectorAll('.text-danger');
+        
+        if (errores.length > 0) {
+            console.log('❌ ERRORES ENCONTRADOS EN EL FORMULARIO:');
+            errores.forEach((error, index) => {
+                // Buscar el campo asociado (el label anterior)
+                const campo = error.closest('.mb-3, .col-md-3, .col-md-4, .col-md-6');
+                const label = campo ? campo.querySelector('label') : null;
+                const nombreCampo = label ? label.textContent.trim() : 'Campo desconocido';
+                
+                console.log(`  ${index + 1}. ${nombreCampo}: ${error.textContent.trim()}`);
+            });
+        } else {
+            console.log('✅ No se encontraron errores visibles en el formulario');
+        }
+        
+        // Verificar valores de campos ocultos
+        console.log('\n📋 Valores actuales de campos ocultos:');
+        const hiddenTipo = document.getElementById('id_tipo');
+        const hiddenMarca = document.getElementById('id_marca');
+        const hiddenModelo = document.getElementById('id_modelo');
+        
+        console.log('  Tipo:', hiddenTipo ? hiddenTipo.value : 'N/A');
+        console.log('  Marca:', hiddenMarca ? hiddenMarca.value : 'N/A');
+        console.log('  Modelo:', hiddenModelo ? hiddenModelo.value : 'N/A');
     });
     </script>
 {% endblock scripts %}

@@ -52,7 +52,30 @@ class ReparacionListView(ListView):
 class ReparacionCreateView(View):
     template_name = 'gestion_servicios/crear_servicio.html'
 
+    def get_context_data(self, cliente_form=None, equipo_form=None, reparacion_form=None):
+        """Función auxiliar para generar el contexto (formularios)"""
+        return {
+            'cliente_form': cliente_form or ClienteForm(),
+            'equipo_form': equipo_form or EquipoForm(),
+            'reparacion_form': reparacion_form or ReparacionForm(),
+        }
+
+    def get(self, request):
+        """Muestra los formularios vacíos"""
+        return render(request, self.template_name, self.get_context_data())
+
+    @transaction.atomic
     def post(self, request, *args, **kwargs):
+        """Procesa el formulario de creación de Orden de Servicio"""
+        
+        # 🔍 DEBUG: Ver todos los datos POST recibidos
+        print("=" * 60)
+        print("📥 Datos POST recibidos:")
+        for key, value in request.POST.items():
+            if key != 'csrfmiddlewaretoken':
+                print(f"  {key}: {value}")
+        print("=" * 60)
+        
         # 1. Instanciar los formularios con los datos del POST
         cliente_form = ClienteForm(request.POST)
         equipo_form = EquipoForm(request.POST)
@@ -63,126 +86,56 @@ class ReparacionCreateView(View):
             
             # --- Lógica de Guardado (Solo si todos son válidos) ---
             
-            cliente = cliente_form.save(commit=False)
-            equipo = equipo_form.save(commit=False)
-            
-            # 1. Búsqueda y Manejo del Cliente existente
+            # 3. Manejo del Cliente
+            cliente_clave = request.POST.get('clave')
             try:
-                # Si el cliente ya existe (por clave), NO lo creamos.
-                cliente_existente = Cliente.objects.get(clave=cliente.clave)
-                cliente = cliente_existente
+                # Si el cliente ya existe (por clave), lo reutilizamos
+                cliente = Cliente.objects.get(clave=cliente_clave)
+                print(f"✅ Cliente existente encontrado: {cliente.nombre}")
             except Cliente.DoesNotExist:
-                # Si no existe, lo guardamos en la DB
-                cliente.save()
+                # Si no existe, creamos uno nuevo
+                cliente = cliente_form.save()
+                print(f"✅ Cliente nuevo creado: {cliente.nombre}")
 
-            # 2. Búsqueda y Manejo del Equipo existente
+            # 4. Manejo del Equipo
+            equipo_serie = request.POST.get('serie_imei')
             try:
-                # Si el equipo ya existe (por SN), NO lo creamos.
-                equipo_existente = Equipo.objects.get(numero_serie=equipo.numero_serie)
-                equipo = equipo_existente
+                # Si el equipo ya existe (por serie), lo reutilizamos
+                equipo = Equipo.objects.get(serie_imei=equipo_serie)
+                print(f"✅ Equipo existente encontrado: {equipo.serie_imei}")
             except Equipo.DoesNotExist:
-                # Si no existe, lo guardamos en la DB
+                # Si no existe, creamos uno nuevo
+                equipo = equipo_form.save(commit=False)
+                equipo.cliente = cliente
                 equipo.save()
+                print(f"✅ Equipo nuevo creado: {equipo.serie_imei}")
 
-            # 3. Guardar la Reparación
+            # 5. Crear la Reparación
             reparacion = reparacion_form.save(commit=False)
             reparacion.cliente = cliente
             reparacion.equipo = equipo
             reparacion.save()
 
-            messages.success(request, f"Orden de Servicio #{reparacion.pk} generada con éxito.")
+            messages.success(request, f"✅ Orden de Servicio #{reparacion.pk} generada con éxito.")
             return redirect('lista_servicios')
 
-        # 3. Si algún formulario NO es válido (Invalido)
+        # 6. Si algún formulario NO es válido
         else:
-            # Si la validación falla, renderiza la plantilla con los formularios y sus errores
-            context = self.get_context_data() # Obtiene los formularios limpios (pero no es lo que queremos)
+            # 🔍 DEBUG: Mostrar errores detallados
+            print("❌ ERRORES DE VALIDACIÓN:")
+            if not cliente_form.is_valid():
+                print("  Cliente Form Errors:", cliente_form.errors)
+            if not equipo_form.is_valid():
+                print("  Equipo Form Errors:", equipo_form.errors)
+            if not reparacion_form.is_valid():
+                print("  Reparación Form Errors:", reparacion_form.errors)
+            print("=" * 60)
             
-            # Sobrescribimos el contexto con los formularios que contienen los datos POST y los errores
-            context['cliente_form'] = cliente_form
-            context['equipo_form'] = equipo_form
-            context['reparacion_form'] = reparacion_form
-            
-            # Mensaje general para el usuario
-            messages.error(request, "Error de validación: Por favor, revisa los campos marcados en rojo.")
+            # Renderizar con los errores
+            context = self.get_context_data(cliente_form, equipo_form, reparacion_form)
+            messages.error(request, "❌ Error de validación: Por favor, revisa los campos marcados en rojo.")
             
             return render(request, self.template_name, context)
-
-
-    def get_context_data(self, cliente_form=None, equipo_form=None, reparacion_form=None):
-        # Función auxiliar para generar el contexto (formularios)
-        return {
-            'cliente_form': cliente_form or ClienteForm(),
-            'equipo_form': equipo_form or EquipoForm(),
-            'reparacion_form': reparacion_form or ReparacionForm(),
-        }
-
-    def get(self, request):
-        # Muestra los formularios vacíos
-        return render(request, self.template_name, self.get_context_data())
-
-    @transaction.atomic # Asegura la integridad de los 3 pasos (Cliente, Equipo, Reparación)
-    def post(self, request):
-        cliente_form = ClienteForm(request.POST)
-        equipo_form = EquipoForm(request.POST)
-        reparacion_form = ReparacionForm(request.POST)
-
-        # 1. Búsqueda de Cliente por 'clave' (DNI/RUC)
-        cliente_clave = request.POST.get('clave')
-        cliente_existente = None
-        
-        if cliente_clave:
-            try:
-                # Intenta encontrar un cliente con esa clave
-                cliente_existente = Cliente.objects.get(clave=cliente_clave)
-            except Cliente.DoesNotExist:
-                pass # Si no existe, cliente_existente sigue siendo None
-
-        
-        # 2. VALIDACIÓN Y CREACIÓN
-        
-        # Caso A: Cliente EXISTE. Solo validamos Equipo y Reparación.
-        if cliente_existente and equipo_form.is_valid() and reparacion_form.is_valid():
-            
-            # 2a. Crear el Equipo
-            nuevo_equipo = equipo_form.save(commit=False)
-            nuevo_equipo.cliente = cliente_existente # Asignamos el cliente encontrado
-            nuevo_equipo.save()
-
-            # 2b. Crear la Reparación
-            nueva_reparacion = reparacion_form.save(commit=False)
-            nueva_reparacion.cliente = cliente_existente
-            nueva_reparacion.equipo = nuevo_equipo
-            nueva_reparacion.save()
-
-            return redirect('lista_servicios') # Éxito
-
-        # Caso B: Cliente NO EXISTE (o no se encontró la clave). Validamos TODO.
-        elif cliente_existente is None and cliente_form.is_valid() and equipo_form.is_valid() and reparacion_form.is_valid():
-            
-            # 2c. Crear el Cliente nuevo (la clave es válida)
-            nuevo_cliente = cliente_form.save()
-
-            # 2d. Crear el Equipo
-            nuevo_equipo = equipo_form.save(commit=False)
-            nuevo_equipo.cliente = nuevo_cliente
-            nuevo_equipo.save()
-
-            # 2e. Crear la Reparación
-            nueva_reparacion = reparacion_form.save(commit=False)
-            nueva_reparacion.cliente = nuevo_cliente
-            nueva_reparacion.equipo = nuevo_equipo
-            nueva_reparacion.save()
-
-            return redirect('lista_servicios') # Éxito
-        
-        # Caso C: FALLA EN LA VALIDACIÓN (Error en algún campo)
-        else:
-            # Si hay error, se re-renderiza con los datos POST y errores.
-            # Aquí podrías agregar lógica para precargar los datos del cliente
-            # si el único error es que el equipo/reparacion falló.
-            return render(request, self.template_name, self.get_context_data(cliente_form, equipo_form, reparacion_form))
-
 
 
 class ReparacionUpdateView(UpdateView):

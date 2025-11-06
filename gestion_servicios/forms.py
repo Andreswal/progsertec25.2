@@ -1,3 +1,6 @@
+
+# gestion_servicios/forms.py
+
 from django import forms
 from .models import Cliente, Equipo, Reparacion, TipoEquipo, Marca, Modelo
 
@@ -26,16 +29,16 @@ class EquipoForm(forms.ModelForm):
     Los campos tipo, marca y modelo se envían como IDs y se convierten a objetos.
     """
     
-    # 🌟 Redefinir campos como IntegerField con HiddenInput
-    tipo = forms.IntegerField(
+    # 🌟 Redefinir campos como CharField para aceptar tanto IDs como texto
+    tipo = forms.CharField(
         required=False,
         widget=forms.HiddenInput(attrs={'id': 'id_tipo'})
     )
-    marca = forms.IntegerField(
+    marca = forms.CharField(
         required=False,
         widget=forms.HiddenInput(attrs={'id': 'id_marca'})
     )
-    modelo = forms.IntegerField(
+    modelo = forms.CharField(
         required=False,
         widget=forms.HiddenInput(attrs={'id': 'id_modelo'})
     )
