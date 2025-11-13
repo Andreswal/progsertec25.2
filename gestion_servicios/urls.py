@@ -39,4 +39,5 @@ urlpatterns = [
 
     path('equipo/buscar-serie/', views.buscar_equipo_existente, name='buscar_equipo_existente'),
 
+    path('equipo/buscar/', views.buscar_equipo_por_imei, name='buscar_equipo'),
 ]

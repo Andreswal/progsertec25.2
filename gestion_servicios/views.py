@@ -53,7 +53,6 @@ class ReparacionCreateView(View):
     template_name = 'gestion_servicios/crear_servicio.html'
 
     def get_context_data(self, cliente_form=None, equipo_form=None, reparacion_form=None):
-        """Función auxiliar para generar el contexto (formularios)"""
         return {
             'cliente_form': cliente_form or ClienteForm(),
             'equipo_form': equipo_form or EquipoForm(),
@@ -61,56 +60,63 @@ class ReparacionCreateView(View):
         }
 
     def get(self, request):
-        """Muestra los formularios vacíos"""
         return render(request, self.template_name, self.get_context_data())
 
     @transaction.atomic
     def post(self, request, *args, **kwargs):
-        """Procesa el formulario de creación de Orden de Servicio"""
-        
-        # 🔍 DEBUG: Ver todos los datos POST recibidos
+        # DEBUG POST
         print("=" * 60)
         print("📥 Datos POST recibidos:")
-        for key, value in request.POST.items():
-            if key != 'csrfmiddlewaretoken':
-                print(f"  {key}: {value}")
+        for k, v in request.POST.items():
+            if k != 'csrfmiddlewaretoken':
+                print(f"  {k}: {v}")
         print("=" * 60)
-        
-        # 1. Instanciar los formularios con los datos del POST
-        cliente_form = ClienteForm(request.POST)
-        equipo_form = EquipoForm(request.POST)
+
+        # 0) Detectar existencia previa para bindear formularios con instance
+        clave_val = request.POST.get('clave', '').strip()
+        serie_val = request.POST.get('serie_imei', '').strip()
+
+        cliente_exist = Cliente.objects.filter(clave=clave_val).first() if clave_val else None
+        equipo_exist = Equipo.objects.filter(serie_imei=serie_val).first() if serie_val else None
+
+        # 1) Instanciar formularios con instance si corresponde (evita errores de unique)
+        cliente_form = ClienteForm(request.POST, instance=cliente_exist) if cliente_exist else ClienteForm(request.POST)
+        equipo_form = EquipoForm(request.POST, instance=equipo_exist) if equipo_exist else EquipoForm(request.POST)
         reparacion_form = ReparacionForm(request.POST)
 
-        # 2. Verificar la validez de TODOS los formularios
+        # 2) Validación
         if cliente_form.is_valid() and equipo_form.is_valid() and reparacion_form.is_valid():
-            
-            # --- Lógica de Guardado (Solo si todos son válidos) ---
-            
-            # 3. Manejo del Cliente
-            cliente_clave = request.POST.get('clave')
-            try:
-                # Si el cliente ya existe (por clave), lo reutilizamos
-                cliente = Cliente.objects.get(clave=cliente_clave)
-                print(f"✅ Cliente existente encontrado: {cliente.nombre}")
-            except Cliente.DoesNotExist:
-                # Si no existe, creamos uno nuevo
-                cliente = cliente_form.save()
-                print(f"✅ Cliente nuevo creado: {cliente.nombre}")
+            # 3) Guardar/actualizar cliente
+            cliente = cliente_form.save()  # si había instance, actualiza; si no, crea
+            print(f"✅ Cliente {'actualizado' if cliente_exist else 'nuevo creado'}: {cliente.nombre}")
 
-            # 4. Manejo del Equipo
-            equipo_serie = request.POST.get('serie_imei')
-            try:
-                # Si el equipo ya existe (por serie), lo reutilizamos
-                equipo = Equipo.objects.get(serie_imei=equipo_serie)
-                print(f"✅ Equipo existente encontrado: {equipo.serie_imei}")
-            except Equipo.DoesNotExist:
-                # Si no existe, creamos uno nuevo
-                equipo = equipo_form.save(commit=False)
-                equipo.cliente = cliente
-                equipo.save()
+            # 4) Guardar/recuperar equipo con get_or_create (por seguridad adicional)
+            serie_imei = equipo_form.cleaned_data.get('serie_imei')
+            equipo, equipo_created = Equipo.objects.get_or_create(
+                serie_imei=serie_imei,
+                defaults={
+                    'tipo': equipo_form.cleaned_data.get('tipo'),
+                    'marca': equipo_form.cleaned_data.get('marca'),
+                    'modelo': equipo_form.cleaned_data.get('modelo'),
+                    'accesorios': equipo_form.cleaned_data.get('accesorios'),
+                    'estado_general': equipo_form.cleaned_data.get('estado_general'),
+                    'fecha_compra': equipo_form.cleaned_data.get('fecha_compra'),
+                }
+            )
+            if equipo_created:
                 print(f"✅ Equipo nuevo creado: {equipo.serie_imei}")
+            else:
+                print(f"✅ Equipo existente encontrado: {equipo.serie_imei}")
+                # Opcional: refrescar datos con lo ingresado
+                equipo.tipo = equipo_form.cleaned_data.get('tipo') or equipo.tipo
+                equipo.marca = equipo_form.cleaned_data.get('marca') or equipo.marca
+                equipo.modelo = equipo_form.cleaned_data.get('modelo') or equipo.modelo
+                equipo.accesorios = equipo_form.cleaned_data.get('accesorios') or equipo.accesorios
+                equipo.estado_general = equipo_form.cleaned_data.get('estado_general') or equipo.estado_general
+                equipo.fecha_compra = equipo_form.cleaned_data.get('fecha_compra') or equipo.fecha_compra
+                equipo.save()
 
-            # 5. Crear la Reparación
+            # 5) Crear la reparación
             reparacion = reparacion_form.save(commit=False)
             reparacion.cliente = cliente
             reparacion.equipo = equipo
@@ -119,23 +125,19 @@ class ReparacionCreateView(View):
             messages.success(request, f"✅ Orden de Servicio #{reparacion.pk} generada con éxito.")
             return redirect('lista_servicios')
 
-        # 6. Si algún formulario NO es válido
-        else:
-            # 🔍 DEBUG: Mostrar errores detallados
-            print("❌ ERRORES DE VALIDACIÓN:")
-            if not cliente_form.is_valid():
-                print("  Cliente Form Errors:", cliente_form.errors)
-            if not equipo_form.is_valid():
-                print("  Equipo Form Errors:", equipo_form.errors)
-            if not reparacion_form.is_valid():
-                print("  Reparación Form Errors:", reparacion_form.errors)
-            print("=" * 60)
-            
-            # Renderizar con los errores
-            context = self.get_context_data(cliente_form, equipo_form, reparacion_form)
-            messages.error(request, "❌ Error de validación: Por favor, revisa los campos marcados en rojo.")
-            
-            return render(request, self.template_name, context)
+        # 6) Si hay errores, mostrarlos
+        print("❌ ERRORES DE VALIDACIÓN:")
+        if not cliente_form.is_valid():
+            print("  Cliente Form Errors:", cliente_form.errors)
+        if not equipo_form.is_valid():
+            print("  Equipo Form Errors:", equipo_form.errors)
+        if not reparacion_form.is_valid():
+            print("  Reparación Form Errors:", reparacion_form.errors)
+        print("=" * 60)
+
+        context = self.get_context_data(cliente_form, equipo_form, reparacion_form)
+        messages.error(request, "❌ Error de validación: Por favor, revise los campos marcados en rojo.")
+        return render(request, self.template_name, context)
 
 
 class ReparacionUpdateView(UpdateView):
@@ -479,3 +481,23 @@ def buscar_equipo_existente(request):
         return JsonResponse(resultados, safe=False)
 
     return JsonResponse([], safe=False)
+
+
+
+@require_GET
+def buscar_equipo_por_imei(request):
+    imei = request.GET.get('imei')
+    try:
+        equipo = Equipo.objects.get(serie_imei=imei)
+        data = {
+            'tipo': equipo.tipo.nombre if equipo.tipo else '',
+            'marca': equipo.marca.nombre if equipo.marca else '',
+            'modelo': equipo.modelo.modelo if equipo.modelo else '',
+            'accesorios': equipo.accesorios,
+            'estado_general': equipo.estado_general,
+            'fecha_compra': equipo.fecha_compra.strftime('%Y-%m-%d') if equipo.fecha_compra else '',
+        }
+        return JsonResponse(data)
+    except Equipo.DoesNotExist:
+        return JsonResponse({'error': 'No encontrado'}, status=404)
+

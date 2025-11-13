@@ -772,5 +772,32 @@
         console.log('  Modelo:', hiddenModelo ? hiddenModelo.value : 'N/A');
     });
     </script>
+
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        const imeiInput = document.getElementById("id_serie_imei");
+    
+        imeiInput.addEventListener("blur", function() {
+            const imei = imeiInput.value.trim();
+            if (imei) {
+                fetch(`/servicios/equipo/buscar/?imei=${imei}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        if (!data.error) {
+                            // Rellenar los campos automáticamente
+                            if (data.tipo) document.getElementById("id_tipo").value = data.tipo;
+                            if (data.marca) document.getElementById("id_marca").value = data.marca;
+                            if (data.modelo) document.getElementById("id_modelo").value = data.modelo;
+                            if (data.accesorios) document.getElementById("id_accesorios").value = data.accesorios;
+                            if (data.estado_general) document.getElementById("id_estado_general").value = data.estado_general;
+                            if (data.fecha_compra) document.getElementById("id_fecha_compra").value = data.fecha_compra;
+                        }
+                    })
+                    .catch(error => console.error("Error en la búsqueda:", error));
+            }
+        });
+    });
+    </script>
+    
 {% endblock scripts %}
 

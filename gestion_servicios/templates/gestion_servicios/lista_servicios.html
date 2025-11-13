@@ -39,7 +39,7 @@
                     <tr>
                         <td>{{ rep.pk }}</td>
                         <td>{{ rep.cliente.nombre }} ({{ rep.cliente.clave }})</td>
-                        <td>{{ rep.equipo.modelo }} / SN: {{ rep.equipo.numero_serie }}</td>
+                        <td>{{ rep.equipo.modelo }} / IMEI: {{ rep.equipo.serie_imei }}</td>
                         <td>{{ rep.fecha_ingreso|date:"Y-m-d" }}</td>
                         <td>{{ rep.tecnico_asignado|default:"-" }}</td>
                         <td><span class="badge bg-secondary">{{ rep.get_estado_display }}</span></td>
