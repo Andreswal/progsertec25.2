@@ -19,6 +19,8 @@ from .models import Marca
 from .forms import MarcaForm 
 from .models import Modelo
 from .forms import ModeloForm
+from .models import Tecnico
+from .forms import TecnicoForm
 
 
 class ReparacionListView(ListView):
@@ -144,25 +146,30 @@ class ReparacionUpdateView(UpdateView):
     model = Reparacion
     form_class = ReparacionUpdateForm
     template_name = 'gestion_servicios/modificar_servicio.html'
-    # Redirige a la lista principal después de guardar
     success_url = reverse_lazy('lista_servicios') 
+
+    # 🌟🌟 INICIO DE LA MODIFICACIÓN 🌟🌟
+    # Esta función añade el formulario del modal de Técnico al contexto
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        if 'tecnico_form' not in context:
+            # Pasa el TecnicoForm para que el modal '#modalNuevoTecnico' lo pueda usar
+            context['tecnico_form'] = TecnicoForm()
+        return context
+    # 🌟🌟 FIN DE LA MODIFICACIÓN 🌟🌟
     
-    # 💡 Lógica para manejar la asignación automática y el cambio de estado
+    # 💡 Tu lógica 'form_valid' existente permanece exactamente igual.
+    # El 'clean_tecnico_asignado' de forms.py ya hizo la conversión.
     def form_valid(self, form):
         reparacion = form.instance
         
         # 1. Asignación del Técnico (Si no estaba asignado y el usuario está logueado como Técnico)
-        # Esto asume que tienes un mecanismo para mapear el 'request.user' a un 'Tecnico'
         if not reparacion.tecnico_asignado and self.request.user.is_authenticated:
-            # Lógica: Asignar el técnico si es la primera vez que se modifica
-            # Ejemplo: reparacion.tecnico_asignado = Tecnico.objects.get(user=self.request.user)
             pass
 
         # 2. Lógica del cambio de Estado (Ejemplo: Al pasar a TERMINADA)
-        # Esto evita que un estado se cambie sin cumplir condiciones
         nuevo_estado = form.cleaned_data.get('estado')
         if nuevo_estado == 'TERMINADA' and not reparacion.informe_tecnico:
-            # Si el técnico intenta terminar sin informe, podrías forzar un error
             form.add_error('informe_tecnico', 'Debe completar el informe para terminar la reparación.')
             return self.form_invalid(form)
 
@@ -501,3 +508,35 @@ def buscar_equipo_por_imei(request):
     except Equipo.DoesNotExist:
         return JsonResponse({'error': 'No encontrado'}, status=404)
 
+
+# -------------------------------------------------
+# VISTAS AJAX PARA TÉCNICOS
+# -------------------------------------------------
+
+@require_POST
+def guardar_tecnico(request):
+    """Guarda un nuevo técnico desde el modal."""
+    form = TecnicoForm(request.POST)
+    if form.is_valid():
+        tecnico = form.save()
+        # Devolvemos el nombre en mayúsculas como lo guarda el clean_
+        nombre_tecnico = tecnico.nombre 
+        return JsonResponse({'success': True, 'id': tecnico.pk, 'nombre': nombre_tecnico})
+    else:
+        # Limpiar errores para enviarlos como JSON
+        cleaned_errors = {}
+        for field, errors in form.errors.as_data().items():
+            cleaned_errors[field] = [str(e.message) for e in errors]
+        return JsonResponse({'success': False, 'errors': cleaned_errors}, status=400)
+
+def buscar_tecnico(request):
+    """Busca técnicos para el autocompletado."""
+    term = request.GET.get('term', '').strip()
+    
+    # Asumiendo que el modelo Tecnico tiene un campo 'nombre'
+    if term:
+        tecnicos = Tecnico.objects.filter(nombre__icontains=term).values('id', 'nombre')[:10]
+        resultados = [{'id': tec.get('id'), 'text': tec.get('nombre')} for tec in tecnicos]
+        return JsonResponse(resultados, safe=False)
+        
+    return JsonResponse([], safe=False)

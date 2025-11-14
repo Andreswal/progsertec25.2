@@ -211,11 +211,20 @@
             <!-- Técnico Asignado (Opcional) -->
             <div class="row">
                 <div class="col-md-6 mb-3">
-                    <label for="{{ reparacion_form.tecnico_asignado.id_for_label }}" class="form-label">
-                        Técnico Asignado (Opcional)
-                    </label>
-                    {{ reparacion_form.tecnico_asignado }}
-                    {% for error in reparacion_form.tecnico_asignado.errors %}
+                    <label for="tecnico-autocomplete-input" class="form-label d-block">Técnico Asignado</label>
+                    <div class="input-group">
+                        <input type="text" id="tecnico-autocomplete-input" class="form-control" 
+                            placeholder="Escribe el nombre del técnico..."
+                            value="{{ form.tecnico_asignado.value|default_if_none:'' }}"> {{ form.tecnico_asignado }}
+                        
+                        <button class="btn btn-outline-secondary" type="button" 
+                                data-bs-toggle="modal" 
+                                data-bs-target="#modalNuevoTecnico" 
+                                title="Añadir nuevo técnico">
+                            +
+                        </button>
+                    </div>
+                    {% for error in form.tecnico_asignado.errors %}
                         <div class="text-danger small">{{ error }}</div>
                     {% endfor %}
                 </div>
@@ -315,6 +324,31 @@
             </div>
         </div>
     </div>
+
+    <div class="modal fade" id="modalNuevoTecnico" tabindex="-1" aria-labelledby="modalNuevoTecnicoLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <form id="formNuevoTecnico" method="post" action="{% url 'guardar_tecnico' %}">
+                    {% csrf_token %}
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="modalNuevoTecnicoLabel">Añadir Nuevo Técnico</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label for="nuevo_tecnico_nombre" class="form-label">Nombre del Técnico</label>
+                            <input type="text" class="form-control" id="nuevo_tecnico_nombre" name="nombre" required>
+                        </div>
+                        <div id="tecnico-error-msg" class="text-danger small" style="display:none;"></div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+                        <button type="submit" class="btn btn-primary">Guardar Técnico</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
 {% endblock %}
 
 
@@ -326,8 +360,9 @@
 <script src="{% static 'gestion_servicios/js/autocomplete.js' %}"></script>
 <script src="{% static 'gestion_servicios/js/garantia.js' %}"></script>
 
-<<script>
+<script>
     document.addEventListener('DOMContentLoaded', function() {
+        
         
         // ============================================
         // MODAL PARA NUEVO TIPO DE EQUIPO
@@ -536,6 +571,66 @@
                 });
             });
         }
+
+        // ============================================
+        // MODAL PARA NUEVO TÉCNICO
+        // ============================================
+        const formNuevoTecnico = document.getElementById('formNuevoTecnico');
+        const modalTecnico = new bootstrap.Modal(document.getElementById('modalNuevoTecnico'));
+        const errorDivTecnico = document.getElementById('tecnico-error-msg');
+        
+        if (formNuevoTecnico) {
+            formNuevoTecnico.addEventListener('submit', function(e) {
+                e.preventDefault();
+                errorDivTecnico.style.display = 'none';
+        
+                fetch(formNuevoTecnico.action, {
+                    method: 'POST',
+                    body: new FormData(formNuevoTecnico),
+                    headers: {
+                        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                    }
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        return response.json().then(data => { throw data; });
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    if (data.success) {
+                        // 1. Actualizar el campo de texto visible
+                        const inputTecnico = document.getElementById('tecnico-autocomplete-input');
+                        if (inputTecnico) {
+                            inputTecnico.value = data.nombre;
+                        }
+                        
+                        // 2. Actualizar el input hidden con el ID
+                        const hiddenInputTecnico = document.getElementById('id_tecnico');
+                        if (hiddenInputTecnico) {
+                            hiddenInputTecnico.value = data.id;
+                        }
+                        
+                        // 3. Cerrar modal y resetear
+                        modalTecnico.hide();
+                        formNuevoTecnico.reset();
+                        console.log('✅ Técnico creado:', data.nombre, 'ID:', data.id);
+                    }
+                })
+                .catch(error => {
+                    console.error('❌ Error al guardar técnico:', error);
+                    let msg = 'Error desconocido al guardar el técnico.';
+                    if (error.errors && error.errors.nombre) {
+                        msg = error.errors.nombre[0];
+                    } else if (error.errors && error.errors.__all__) {
+                        msg = error.errors.__all__[0];
+                    }
+                    errorDivTecnico.textContent = msg;
+                    errorDivTecnico.style.display = 'block';
+                });
+            });
+        }
+
     });
     </script>
 
@@ -683,6 +778,47 @@
                 alert("¡Cuidado! Este número de serie/IMEI ya está registrado en la base de datos.");
             }
         });
+        
+        // ============================================
+        // AUTOCOMPLETADO DE TÉCNICO
+        // ============================================
+        var $hiddenTecnico = $('#id_tecnico');
+        var $inputTecnico = $('#tecnico-autocomplete-input');
+    
+        $inputTecnico.autocomplete({
+            source: function(request, response) {
+                $.ajax({
+                    url: "{% url 'buscar_tecnico' %}", // 🌟 Nueva URL necesaria
+                    dataType: "json",
+                    data: {
+                        term: request.term
+                    },
+                    success: function(data) {
+                        response($.map(data, function(item) {
+                            return {
+                                label: item.text, // Asumiendo que la vista devuelve 'text'
+                                value: item.text,
+                                option_id: item.id // Asumiendo que la vista devuelve 'id'
+                            };
+                        }));
+                    }
+                });
+            },
+            minLength: 2,
+            select: function(event, ui) {
+                // Actualizar el input hidden con el ID
+                $hiddenTecnico.val(ui.item.option_id);
+                console.log("✅ Técnico seleccionado, ID:", ui.item.option_id);
+            }
+        });
+        
+        // Resetear si el usuario borra el campo
+        $inputTecnico.on('change', function() {
+            if ($(this).val() === '') {
+                $hiddenTecnico.val('');
+            }
+        });
+
     });
     </script>
 

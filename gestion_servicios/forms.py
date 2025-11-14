@@ -1,7 +1,7 @@
 # gestion_servicios/forms.py
 
 from django import forms
-from .models import Cliente, Equipo, Reparacion, TipoEquipo, Marca, Modelo
+from .models import Cliente, Equipo, Reparacion, TipoEquipo, Marca, Modelo, Tecnico
 
 # ======================================================================
 # 1. FORMULARIOS DE CREACIÓN (RECEPCIÓN)
@@ -187,6 +187,14 @@ class EquipoForm(forms.ModelForm):
 
 class ReparacionForm(forms.ModelForm):
     """Formulario para crear reparaciones (Orden de Servicio)."""
+
+    # 🌟 PASO 1: Redefinir el campo como CharField con HiddenInput
+    # (Igual que en EquipoForm)
+    tecnico_asignado = forms.CharField(
+        required=False, # Mantenemos el campo como opcional
+        widget=forms.HiddenInput(attrs={'id': 'id_tecnico'})
+    )
+
     class Meta:
         model = Reparacion
         fields = ['tecnico_asignado', 'falla_reportada']
@@ -196,11 +204,43 @@ class ReparacionForm(forms.ModelForm):
                 'rows': 4,
                 'placeholder': 'Ej: El equipo no enciende, la pantalla está rota, no carga la batería...'
             }),
-            'tecnico_asignado': forms.Select(attrs={
-                'class': 'form-control',
-                'required': False
-            }),
+            # ⬇️ Eliminamos el widget 'tecnico_asignado' de aquí
         }
+
+    # 🌟 PASO 2: Añadir el método 'clean_' para la conversión inteligente
+    # (Copiado de la lógica de clean_marca)
+    def clean_tecnico_asignado(self):
+        """
+        Convierte el ID o crea un nuevo Tecnico si es texto.
+        """
+        tecnico_valor = self.cleaned_data.get('tecnico_asignado')
+        
+        # Si está vacío, retornar None
+        if not tecnico_valor or tecnico_valor == '':
+            return None
+        
+        # Convertir a string y limpiar espacios
+        tecnico_valor = str(tecnico_valor).strip()
+        
+        # CASO 1: Es un número (ID) → Buscar registro existente
+        if tecnico_valor.isdigit():
+            try:
+                return Tecnico.objects.get(pk=int(tecnico_valor))
+            except Tecnico.DoesNotExist:
+                raise forms.ValidationError("El técnico seleccionado no es válido.")
+        
+        # CASO 2: Es texto → Buscar o crear (case-insensitive)
+        # Asumiendo que el modelo Tecnico tiene un campo 'nombre'
+        try:
+            # Intentar encontrar existente
+            tecnico_obj = Tecnico.objects.get(nombre__iexact=tecnico_valor)
+            print(f"✅ Técnico encontrado: {tecnico_obj.nombre}")
+            return tecnico_obj
+        except Tecnico.DoesNotExist:
+            # Si no existe, crear nuevo
+            tecnico_obj = Tecnico.objects.create(nombre=tecnico_valor.upper())
+            print(f"✅ Técnico creado automáticamente: {tecnico_obj.nombre}")
+            return tecnico_obj
 
 
 # ======================================================================
@@ -209,22 +249,58 @@ class ReparacionForm(forms.ModelForm):
 
 class ReparacionUpdateForm(forms.ModelForm):
     """Formulario para actualizar el estado de la reparación."""
+
+    # 🌟 PASO 1: Redefinir el campo como CharField con HiddenInput
+    # (Usamos el mismo ID 'id_tecnico' para que el JS se pueda reutilizar)
+    tecnico_asignado = forms.CharField(
+        required=False,
+        widget=forms.HiddenInput(attrs={'id': 'id_tecnico'})
+    )
+
     class Meta:
         model = Reparacion
         fields = [
             'estado',
-            'tecnico_asignado',
+            'tecnico_asignado', # El campo sigue aquí
             'informe_tecnico',
             'mano_de_obra',
             'saldo_final'
         ]
         widgets = {
             'estado': forms.Select(attrs={'class': 'form-control'}),
-            'tecnico_asignado': forms.Select(attrs={'class': 'form-control'}),
+            # ⛔ 'tecnico_asignado' SE QUITA DE LOS WIDGETS DE META
             'informe_tecnico': forms.Textarea(attrs={'class': 'form-control', 'rows': 5}),
             'mano_de_obra': forms.NumberInput(attrs={'class': 'form-control'}),
             'saldo_final': forms.NumberInput(attrs={'class': 'form-control'}),
         }
+
+    # 🌟 PASO 2: Añadir el método 'clean_' para la conversión inteligente
+    # (Exactamente el mismo que en ReparacionForm)
+    def clean_tecnico_asignado(self):
+        tecnico_valor = self.cleaned_data.get('tecnico_asignado')
+        
+        if not tecnico_valor or tecnico_valor == '':
+            return None
+        
+        tecnico_valor = str(tecnico_valor).strip()
+        
+        # CASO 1: Es un número (ID)
+        if tecnico_valor.isdigit():
+            try:
+                # 🌟 Asegúrate de tener 'Tecnico' importado al inicio de forms.py
+                return Tecnico.objects.get(pk=int(tecnico_valor))
+            except Tecnico.DoesNotExist:
+                raise forms.ValidationError("El técnico seleccionado no es válido.")
+        
+        # CASO 2: Es texto (autocreación)
+        try:
+            tecnico_obj = Tecnico.objects.get(nombre__iexact=tecnico_valor)
+            print(f"✅ Técnico encontrado: {tecnico_obj.nombre}")
+            return tecnico_obj
+        except Tecnico.DoesNotExist:
+            tecnico_obj = Tecnico.objects.create(nombre=tecnico_valor.upper())
+            print(f"✅ Técnico creado automáticamente: {tecnico_obj.nombre}")
+            return tecnico_obj
 
 
 # ======================================================================
@@ -266,5 +342,17 @@ class ModeloForm(forms.ModelForm):
             'modelo': forms.TextInput(attrs={
                 'class': 'form-control',
                 'placeholder': 'Ej: Galaxy S21, iPhone 13, Pavilion...'
+            })
+        }
+        
+class TecnicoForm(forms.ModelForm):
+    """Formulario simple para crear Tecnico desde el modal."""
+    class Meta:
+        model = Tecnico # Asumiendo que el modelo se llama 'Tecnico'
+        fields = ['nombre'] # Asumiendo que el campo a llenar es 'nombre'
+        widgets = {
+            'nombre': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Ej: Juan Pérez, Maria Gómez...'
             })
         }

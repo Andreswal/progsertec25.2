@@ -40,4 +40,7 @@ urlpatterns = [
     path('equipo/buscar-serie/', views.buscar_equipo_existente, name='buscar_equipo_existente'),
 
     path('equipo/buscar/', views.buscar_equipo_por_imei, name='buscar_equipo'),
+    
+    path('tecnico/guardar/', views.guardar_tecnico, name='guardar_tecnico'),
+    path('tecnico/buscar/', views.buscar_tecnico, name='buscar_tecnico'),
 ]
